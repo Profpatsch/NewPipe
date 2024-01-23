@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.preference.PreferenceManager;
 
@@ -32,14 +33,13 @@ public final class ServiceHelper {
     private ServiceHelper() { }
 
     @DrawableRes
-    public static int getIcon(final int serviceId) {
+    public static int getIcon(final ServiceId serviceId) {
         return switch (serviceId) {
-            case 0 -> R.drawable.ic_smart_display;
-            case 1 -> R.drawable.ic_cloud;
-            case 2 -> R.drawable.ic_placeholder_media_ccc;
-            case 3 -> R.drawable.ic_placeholder_peertube;
-            case 4 -> R.drawable.ic_placeholder_bandcamp;
-            default -> R.drawable.ic_circle;
+            case YOUTUBE -> R.drawable.ic_smart_display;
+            case SOUNDCLOUD -> R.drawable.ic_cloud;
+            case MEDIA_CCC -> R.drawable.ic_placeholder_media_ccc;
+            case PEERTUBE -> R.drawable.ic_placeholder_peertube;
+            case BANDCAMP -> R.drawable.ic_placeholder_bandcamp;
         };
     }
 
@@ -64,31 +64,18 @@ public final class ServiceHelper {
      * Get a resource string with instructions for importing subscriptions for each service.
      *
      * @param serviceId service to get the instructions for
-     * @return the string resource containing the instructions or -1 if the service don't support it
+     * @return the string resource containing the instructions if applicable
      */
+    @Nullable
     @StringRes
-    public static int getImportInstructions(final int serviceId) {
+    public static Integer getImportInstructions(final ServiceId serviceId) {
         return switch (serviceId) {
-            case 0 -> R.string.import_youtube_instructions;
-            case 1 -> R.string.import_soundcloud_instructions;
-            default -> -1;
+            case YOUTUBE -> R.string.import_youtube_instructions;
+            case SOUNDCLOUD -> R.string.import_soundcloud_instructions;
+            default -> null;
         };
     }
 
-    /**
-     * For services that support importing from a channel url, return a hint that will
-     * be used in the EditText that the user will type in his channel url.
-     *
-     * @param serviceId service to get the hint for
-     * @return the hint's string resource or -1 if the service don't support it
-     */
-    @StringRes
-    public static int getImportInstructionsHint(final int serviceId) {
-        if (serviceId == 1) {
-            return R.string.import_soundcloud_instructions_hint;
-        }
-        return -1;
-    }
 
     public static int getSelectedServiceIdOrFallback(final Context context) {
         return getSelectedService(context)

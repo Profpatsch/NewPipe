@@ -33,7 +33,6 @@ import org.schabi.newpipe.databinding.FeedItemCarouselBinding
 import org.schabi.newpipe.databinding.FragmentSubscriptionBinding
 import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.UserAction
-import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfoItem
 import org.schabi.newpipe.fragments.BaseStateFragment
 import org.schabi.newpipe.ktx.animate
@@ -59,6 +58,7 @@ import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.NavigationHelper
 import org.schabi.newpipe.util.OnClickGesture
 import org.schabi.newpipe.util.ServiceHelper
+import org.schabi.newpipe.util.ServiceId
 import org.schabi.newpipe.util.ThemeHelper.getGridSpanCountChannels
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import java.text.SimpleDateFormat
@@ -145,16 +145,16 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         addMenuItemToSubmenu(importSubMenu, R.string.previous_export) { onImportPreviousSelected() }
             .setIcon(R.drawable.ic_backup)
 
-        for (service in ServiceList.all()) {
-            val subscriptionExtractor = service.subscriptionExtractor ?: continue
+        for (serviceId in ServiceId.entries) {
+            val subscriptionExtractor = serviceId.service.subscriptionExtractor ?: continue
 
             val supportedSources = subscriptionExtractor.supportedSources
             if (supportedSources.isEmpty()) continue
 
-            addMenuItemToSubmenu(importSubMenu, service.serviceInfo.name) {
-                onImportFromServiceSelected(service.serviceId)
+            addMenuItemToSubmenu(importSubMenu, serviceId.service.serviceInfo.name) {
+                NavigationHelper.openSubscriptionsImportFragment(fm, serviceId)
             }
-                .setIcon(ServiceHelper.getIcon(service.serviceId))
+                .setIcon(ServiceHelper.getIcon(serviceId))
         }
 
         // -- Export --
@@ -189,11 +189,6 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
             true
         }
         return menuItem
-    }
-
-    private fun onImportFromServiceSelected(serviceId: Int) {
-        val fragmentManager = fm
-        NavigationHelper.openSubscriptionsImportFragment(fragmentManager, serviceId)
     }
 
     private fun onImportPreviousSelected() {

@@ -38,7 +38,6 @@ import org.reactivestreams.Subscription;
 import org.schabi.newpipe.App;
 import org.schabi.newpipe.R;
 import org.schabi.newpipe.database.subscription.SubscriptionEntity;
-import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.channel.ChannelInfo;
 import org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo;
 import org.schabi.newpipe.extractor.subscription.SubscriptionItem;
@@ -47,6 +46,7 @@ import org.schabi.newpipe.streams.io.SharpInputStream;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.ExtractorHelper;
+import org.schabi.newpipe.util.ServiceId;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,7 +89,7 @@ public class SubscriptionsImportService extends BaseImportExportService {
 
     private Subscription subscription;
     private int currentMode;
-    private int currentServiceId;
+    private ServiceId currentServiceId;
     @Nullable
     private String channelUrl;
     @Nullable
@@ -104,7 +104,7 @@ public class SubscriptionsImportService extends BaseImportExportService {
         }
 
         currentMode = intent.getIntExtra(KEY_MODE, -1);
-        currentServiceId = intent.getIntExtra(Constants.KEY_SERVICE_ID, Constants.NO_SERVICE_ID);
+        currentServiceId = ServiceId.valueOf(intent.getStringExtra(Constants.KEY_SERVICE_ID));
 
         if (currentMode == CHANNEL_URL_MODE) {
             channelUrl = intent.getStringExtra(KEY_VALUE);
@@ -303,7 +303,7 @@ public class SubscriptionsImportService extends BaseImportExportService {
     }
 
     private Flowable<List<SubscriptionItem>> importFromChannelUrl() {
-        return Flowable.fromCallable(() -> NewPipe.getService(currentServiceId)
+        return Flowable.fromCallable(() -> currentServiceId.getService()
                 .getSubscriptionExtractor()
                 .fromChannelUrl(channelUrl));
     }
@@ -312,7 +312,7 @@ public class SubscriptionsImportService extends BaseImportExportService {
         Objects.requireNonNull(inputStream);
         Objects.requireNonNull(inputStreamType);
 
-        return Flowable.fromCallable(() -> NewPipe.getService(currentServiceId)
+        return Flowable.fromCallable(() -> currentServiceId.getService()
                 .getSubscriptionExtractor()
                 .fromInputStream(inputStream, inputStreamType));
     }

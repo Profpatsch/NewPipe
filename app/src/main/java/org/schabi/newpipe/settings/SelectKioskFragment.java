@@ -20,6 +20,7 @@ import org.schabi.newpipe.extractor.NewPipe;
 import org.schabi.newpipe.extractor.StreamingService;
 import org.schabi.newpipe.util.KioskTranslator;
 import org.schabi.newpipe.util.ServiceHelper;
+import org.schabi.newpipe.util.ServiceId;
 import org.schabi.newpipe.util.ThemeHelper;
 
 import java.util.List;
@@ -110,7 +111,7 @@ public class SelectKioskFragment extends DialogFragment {
                     final String name = String.format(getString(R.string.service_kiosk_string),
                             service.getServiceInfo().getName(),
                             KioskTranslator.getTranslatedKioskName(kioskId, getContext()));
-                    kioskList.add(new Entry(ServiceHelper.getIcon(service.getServiceId()),
+                    kioskList.add(new Entry(ServiceHelper.getIcon(ServiceId.of(service)),
                             service.getServiceId(), kioskId, name));
                 }
             }

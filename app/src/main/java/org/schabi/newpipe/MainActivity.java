@@ -88,6 +88,7 @@ import org.schabi.newpipe.util.PeertubeHelper;
 import org.schabi.newpipe.util.PermissionHelper;
 import org.schabi.newpipe.util.SerializedCache;
 import org.schabi.newpipe.util.ServiceHelper;
+import org.schabi.newpipe.util.ServiceId;
 import org.schabi.newpipe.util.StateSaver;
 import org.schabi.newpipe.util.ThemeHelper;
 import org.schabi.newpipe.views.FocusOverlayView;
@@ -383,7 +384,7 @@ public class MainActivity extends AppCompatActivity {
 
             final MenuItem menuItem = drawerLayoutBinding.navigation.getMenu()
                     .add(R.id.menu_services_group, s.getServiceId(), ORDER, title)
-                    .setIcon(ServiceHelper.getIcon(s.getServiceId()));
+                    .setIcon(ServiceHelper.getIcon(ServiceId.of(s)));
 
             // peertube specifics
             if (s.getServiceId() == 3) {
@@ -462,12 +463,13 @@ public class MainActivity extends AppCompatActivity {
         // so it looks like the drawer isn't open when the user returns to MainActivity
         mainBinding.getRoot().closeDrawer(GravityCompat.START, false);
         try {
-            final int selectedServiceId = ServiceHelper.getSelectedServiceIdOrFallback(this);
-            final String selectedServiceName = NewPipe.getService(selectedServiceId)
-                    .getServiceInfo().getName();
+            final StreamingService selectedService =
+                    ServiceHelper.getSelectedServiceOrFallback(this);
+            final String selectedServiceName =
+                    selectedService.getServiceInfo().getName();
             drawerHeaderBinding.drawerHeaderServiceView.setText(selectedServiceName);
             drawerHeaderBinding.drawerHeaderServiceIcon.setImageResource(ServiceHelper
-                    .getIcon(selectedServiceId));
+                    .getIcon(ServiceId.of(selectedService)));
 
             drawerHeaderBinding.drawerHeaderServiceView.post(() -> drawerHeaderBinding
                     .drawerHeaderServiceView.setSelected(true));

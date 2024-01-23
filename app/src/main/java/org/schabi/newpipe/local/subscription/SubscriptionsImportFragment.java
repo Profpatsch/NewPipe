@@ -32,14 +32,13 @@ import org.schabi.newpipe.R;
 import org.schabi.newpipe.error.ErrorInfo;
 import org.schabi.newpipe.error.ErrorUtil;
 import org.schabi.newpipe.error.UserAction;
-import org.schabi.newpipe.extractor.NewPipe;
-import org.schabi.newpipe.extractor.exceptions.ExtractionException;
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor;
 import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService;
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard;
 import org.schabi.newpipe.streams.io.StoredFileHelper;
 import org.schabi.newpipe.util.Constants;
 import org.schabi.newpipe.util.ServiceHelper;
+import org.schabi.newpipe.util.ServiceId;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,13 +47,13 @@ import icepick.State;
 
 public class SubscriptionsImportFragment extends BaseFragment {
     @State
-    int currentServiceId = Constants.NO_SERVICE_ID;
+    protected ServiceId serviceId;
 
     private List<SubscriptionExtractor.ContentSource> supportedSources = Collections.emptyList();
     private String relatedUrl = null;
-
+    @Nullable
     @StringRes
-    private int instructionsString = 0;
+    private Integer instructionsString;
 
     /*//////////////////////////////////////////////////////////////////////////
     // Views
@@ -67,14 +66,8 @@ public class SubscriptionsImportFragment extends BaseFragment {
     private final ActivityResultLauncher<Intent> requestImportFileLauncher =
             registerForActivityResult(new StartActivityForResult(), this::requestImportFileResult);
 
-    public static SubscriptionsImportFragment getInstance(final int serviceId) {
-        final SubscriptionsImportFragment instance = new SubscriptionsImportFragment();
-        instance.setInitialData(serviceId);
-        return instance;
-    }
-
-    private void setInitialData(final int serviceId) {
-        this.currentServiceId = serviceId;
+    public SubscriptionsImportFragment(final ServiceId serviceId) {
+        this.serviceId = serviceId;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -85,21 +78,16 @@ public class SubscriptionsImportFragment extends BaseFragment {
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (currentServiceId != Constants.NO_SERVICE_ID) {
-            try {
-                final SubscriptionExtractor extractor = NewPipe.getService(currentServiceId)
-                        .getSubscriptionExtractor();
-                supportedSources = extractor.getSupportedSources();
-                relatedUrl = extractor.getRelatedUrl();
-                instructionsString = ServiceHelper.getImportInstructions(currentServiceId);
-            } catch (final ExtractionException ignored) {
-            }
-        }
+        final SubscriptionExtractor extractor = serviceId.getService()
+                .getSubscriptionExtractor();
+        supportedSources = extractor.getSupportedSources();
+        relatedUrl = extractor.getRelatedUrl();
+        instructionsString = ServiceHelper.getImportInstructions(serviceId);
 
-        if (supportedSources.isEmpty() && currentServiceId != Constants.NO_SERVICE_ID) {
+        if (supportedSources.isEmpty()) {
             ErrorUtil.showSnackbar(activity,
                     new ErrorInfo(new String[]{}, UserAction.SUBSCRIPTION_IMPORT_EXPORT,
-                            ServiceHelper.getNameOfServiceByIdOrUnknown(currentServiceId),
+                            serviceId.getService().getServiceInfo().getName(),
                             "Service does not support importing subscriptions",
                             R.string.general_error));
             activity.finish();
@@ -138,19 +126,19 @@ public class SubscriptionsImportFragment extends BaseFragment {
         if (supportedSources.contains(CHANNEL_URL)) {
             inputButton.setText(R.string.import_title);
             inputText.setVisibility(View.VISIBLE);
-            inputText.setHint(ServiceHelper.getImportInstructionsHint(currentServiceId));
+            if (serviceId == ServiceId.SOUNDCLOUD) {
+                inputText.setHint(R.string.import_soundcloud_instructions_hint);
+            }
         } else {
             inputButton.setText(R.string.import_file_title);
         }
 
-        if (instructionsString != 0) {
-            if (TextUtils.isEmpty(relatedUrl)) {
-                setInfoText(getString(instructionsString));
-            } else {
-                setInfoText(getString(instructionsString, relatedUrl));
-            }
-        } else {
+        if (instructionsString == null) {
             setInfoText("");
+        } else if (TextUtils.isEmpty(relatedUrl)) {
+            setInfoText(getString(instructionsString));
+        } else {
+            setInfoText(getString(instructionsString, relatedUrl));
         }
 
         final ActionBar supportActionBar = activity.getSupportActionBar();
@@ -181,7 +169,7 @@ public class SubscriptionsImportFragment extends BaseFragment {
         ImportConfirmationDialog.show(this, new Intent(activity, SubscriptionsImportService.class)
                 .putExtra(KEY_MODE, CHANNEL_URL_MODE)
                 .putExtra(KEY_VALUE, value)
-                .putExtra(Constants.KEY_SERVICE_ID, currentServiceId));
+                .putExtra(Constants.KEY_SERVICE_ID, serviceId.name()));
     }
 
     public void onImportFile() {
@@ -205,7 +193,7 @@ public class SubscriptionsImportFragment extends BaseFragment {
                     new Intent(activity, SubscriptionsImportService.class)
                             .putExtra(KEY_MODE, INPUT_STREAM_MODE)
                             .putExtra(KEY_VALUE, result.getData().getData())
-                            .putExtra(Constants.KEY_SERVICE_ID, currentServiceId));
+                            .putExtra(Constants.KEY_SERVICE_ID, serviceId.name()));
         }
     }
 
