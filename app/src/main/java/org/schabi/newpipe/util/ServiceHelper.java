@@ -167,7 +167,12 @@ public final class ServiceHelper {
         }
     }
 
-    public static void setSelectedServiceId(final Context context, final int serviceId) {
+    /** Set the selected service by service number, or use the fallback service.
+     *
+     * @param context set the current_service_key in the app preferences.
+     * @param serviceId service to select
+     */
+    public static void setSelectedServiceIdOrFallback(final Context context, final int serviceId) {
         String serviceName;
         try {
             serviceName = NewPipe.getService(serviceId).getServiceInfo().getName();
@@ -175,11 +180,6 @@ public final class ServiceHelper {
             serviceName = DEFAULT_FALLBACK_SERVICE.getServiceInfo().getName();
         }
 
-        setSelectedServicePreferences(context, serviceName);
-    }
-
-    private static void setSelectedServicePreferences(final Context context,
-                                                      final String serviceName) {
         PreferenceManager.getDefaultSharedPreferences(context).edit().
                 putString(context.getString(R.string.current_service_key), serviceName).apply();
     }

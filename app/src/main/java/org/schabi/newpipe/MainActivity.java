@@ -288,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
         drawerLayoutBinding.navigation.getMenu()
                 .getItem(ServiceHelper.getSelectedServiceIdOrFallback(this))
                 .setChecked(false);
-        ServiceHelper.setSelectedServiceId(this, item.getItemId());
+        ServiceHelper.setSelectedServiceIdOrFallback(this, item.getItemId());
         drawerLayoutBinding.navigation.getMenu()
                 .getItem(ServiceHelper.getSelectedServiceIdOrFallback(this))
                 .setChecked(true);
