@@ -21,13 +21,17 @@ import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.helper.PlayerHolder.PlayerServiceConnection
 import org.schabi.newpipe.player.playqueue.PlayQueue
 
+data class Listeners(
+    val listener: PlayerServiceEventListener,
+    val holderListener: PlayerHolderLifecycleEventListener
+)
+
 /**
  * Singleton that manages a `PlayerService`
  * and can be used to control the player instance through the service.
  */
 class PlayerHolder private constructor() {
-    private var listener: PlayerServiceEventListener? = null
-    private var holderListener: PlayerHolderLifecycleEventListener? = null
+    private var listeners: Listeners? = null
 
     private val serviceConnection = PlayerServiceConnection()
     private var bound = false
@@ -41,23 +45,14 @@ class PlayerHolder private constructor() {
      *
      * @return Current PlayerType
      */
-    fun getType(): PlayerType? {
-        if (player == null) {
-            return null
-        }
-        return player!!.playerType
-    }
+    fun getType(): PlayerType? =
+        player?.playerType
 
-    fun isPlaying(): Boolean {
-        if (player == null) {
-            return false
-        }
-        return player!!.isPlaying
-    }
+    fun isPlaying(): Boolean =
+        player?.isPlaying == true
 
-    fun isPlayerOpen(): Boolean {
-        return player != null
-    }
+    fun isPlayerOpen(): Boolean =
+        player != null
 
     /**
      * Use this method to only allow the user to manipulate the play queue (e.g. by enqueueing via
@@ -87,11 +82,6 @@ class PlayerHolder private constructor() {
         return player!!.playQueue!!.index
     }
 
-    fun unsetListeners() {
-        listener = null
-        holderListener = null
-    }
-
     /**
      * Helper to handle context in common place as using the same
      * context to bind/unbind a service is crucial.
@@ -113,16 +103,15 @@ class PlayerHolder private constructor() {
      */
     fun startService(
         playAfterConnect: Boolean,
-        newListener: PlayerServiceEventListener?,
-        newHolderListener: PlayerHolderLifecycleEventListener?
+        newListener: PlayerServiceEventListener,
+        newHolderListener: PlayerHolderLifecycleEventListener
     ) {
         val context = getCommonContext()
-        listener = newListener
-        holderListener = newHolderListener
+        listeners = Listeners(newListener, newHolderListener)
 
         // Force reload data from service
         if (player != null) {
-            holderListener!!.onServiceConnected(playerService, false)
+            newHolderListener.onServiceConnected(playerService, false)
             player!!.setFragmentListener(internalListener)
         }
         if (bound) {
@@ -157,8 +146,8 @@ class PlayerHolder private constructor() {
 
     /**
      * Call [Context.unbindService] on our service
-     * (does not necesarily stop the service right away).
-     * Remove all our listeners and deinitialize them.
+     * (does not necessarily stop the service right away).
+     * Remove all our listeners and initialize them.
      * @param context shared context
      */
     private fun unbind(context: Context) {
@@ -174,10 +163,12 @@ class PlayerHolder private constructor() {
             }
             playerService = null
             player = null
-            if (holderListener != null) {
-                holderListener!!.onServiceDisconnected()
-            }
+            listeners?.holderListener?.onServiceDisconnected()
         }
+    }
+
+    fun unsetListeners() {
+        listeners = null
     }
 
     internal inner class PlayerServiceConnection : ServiceConnection {
@@ -200,19 +191,11 @@ class PlayerHolder private constructor() {
 
             playerService = localBinder.getService()
             requireNotNull(playerService) {
-                (
-                    "PlayerService.LocalBinder.getService() must never be" +
-                        "null after the service connects"
-                    )
+                "PlayerService.LocalBinder.getService() must never be null after the service connects"
             }
             player = playerService!!.player
-
-            if (holderListener != null) {
-                holderListener!!.onServiceConnected(playerService, playAfterConnect)
-            }
-            if (player != null) {
-                player!!.setFragmentListener(internalListener)
-            }
+            listeners?.holderListener?.onServiceConnected(playerService, playAfterConnect)
+            player?.setFragmentListener(internalListener)
         }
     }
 
@@ -223,48 +206,34 @@ class PlayerHolder private constructor() {
      */
     private val internalListener: PlayerServiceEventListener = object : PlayerServiceEventListener {
         override fun onViewCreated() {
-            if (listener != null) {
-                listener!!.onViewCreated()
-            }
+            listeners?.listener?.onViewCreated()
         }
 
         override fun onFullscreenStateChanged(fullscreen: Boolean) {
-            if (listener != null) {
-                listener!!.onFullscreenStateChanged(fullscreen)
-            }
+            listeners?.listener?.onFullscreenStateChanged(fullscreen)
         }
 
         override fun onScreenRotationButtonClicked() {
-            if (listener != null) {
-                listener!!.onScreenRotationButtonClicked()
-            }
+            listeners?.listener?.onScreenRotationButtonClicked()
         }
 
         override fun onMoreOptionsLongClicked() {
-            if (listener != null) {
-                listener!!.onMoreOptionsLongClicked()
-            }
+            listeners?.listener?.onMoreOptionsLongClicked()
         }
 
         override fun onPlayerError(
             error: PlaybackException?,
             isCatchableException: Boolean
         ) {
-            if (listener != null) {
-                listener!!.onPlayerError(error, isCatchableException)
-            }
+            listeners?.listener?.onPlayerError(error, isCatchableException)
         }
 
         override fun hideSystemUiIfNeeded() {
-            if (listener != null) {
-                listener!!.hideSystemUiIfNeeded()
-            }
+            listeners?.listener?.hideSystemUiIfNeeded()
         }
 
         override fun onQueueUpdate(queue: PlayQueue?) {
-            if (listener != null) {
-                listener!!.onQueueUpdate(queue)
-            }
+            listeners?.listener?.onQueueUpdate(queue)
         }
 
         override fun onPlaybackUpdate(
@@ -273,9 +242,7 @@ class PlayerHolder private constructor() {
             shuffled: Boolean,
             parameters: PlaybackParameters?
         ) {
-            if (listener != null) {
-                listener!!.onPlaybackUpdate(state, repeatMode, shuffled, parameters)
-            }
+            listeners?.listener?.onPlaybackUpdate(state, repeatMode, shuffled, parameters)
         }
 
         override fun onProgressUpdate(
@@ -283,21 +250,15 @@ class PlayerHolder private constructor() {
             duration: Int,
             bufferPercent: Int
         ) {
-            if (listener != null) {
-                listener!!.onProgressUpdate(currentProgress, duration, bufferPercent)
-            }
+            listeners?.listener?.onProgressUpdate(currentProgress, duration, bufferPercent)
         }
 
         override fun onMetadataUpdate(info: StreamInfo?, queue: PlayQueue?) {
-            if (listener != null) {
-                listener!!.onMetadataUpdate(info, queue)
-            }
+            listeners?.listener?.onMetadataUpdate(info, queue)
         }
 
         override fun onServiceStopped() {
-            if (listener != null) {
-                listener!!.onServiceStopped()
-            }
+            listeners?.listener?.onServiceStopped()
             unbind(getCommonContext())
         }
     }
