@@ -213,8 +213,15 @@ class VideoDetailFragment :
 
     private var settingsContentObserver: ContentObserver? = null
 
-    private var playerService: PlayerService? = null
+    private var playerService: VideoDetailFragmentPlayer? = null
     private var player: Player? = null
+
+    private fun ifPlayer(block: VideoDetailFragmentPlayer.() -> Unit) {
+        val p = playerService
+        if (p != null) {
+            block(p)
+        }
+    }
 
     /*//////////////////////////////////////////////////////////////////////////
     // Service management
@@ -224,7 +231,7 @@ class VideoDetailFragment :
         playAfterConnect: Boolean
     ) {
         player = connectedPlayerService.player
-        playerService = connectedPlayerService
+        playerService = VideoDetailFragmentPlayer(connectedPlayerService)
 
         // It will do nothing if the player is not in fullscreen mode
         hideSystemUiIfNeeded()
@@ -1239,7 +1246,7 @@ class VideoDetailFragment :
     }
 
     private fun openMainPlayer() {
-        if (noPlayerServiceAvailable()) {
+        if (playerService == null) {
             PlayerHolder.startService(autoPlayEnabled, this, this)
             return
         }
@@ -1265,15 +1272,15 @@ class VideoDetailFragment :
      * be reused in a few milliseconds and the flickering would be annoying.
      */
     private fun hideMainPlayerOnLoadingNewStream() {
-        getRoot()?.let { root ->
-            if (noPlayerServiceAvailable() || !player!!.videoPlayerSelected()) {
-                return
+        ifPlayer {
+            if (!player.videoPlayerSelected()) {
+                return@ifPlayer
             }
 
             removeVideoPlayerView()
             if (isAutoplayEnabled()) {
-                playerService!!.stopForImmediateReusing()
-                root.visibility = View.GONE
+                playerService.stopForImmediateReusing()
+                videoPlayerRoot?.visibility = View.GONE
             } else {
                 PlayerHolder.stopService()
             }
@@ -2035,26 +2042,28 @@ class VideoDetailFragment :
 
     override fun onFullscreenStateChanged(fullscreen: Boolean) {
         setupBrightness()
-        if (!isPlayerAndPlayerServiceAvailable() ||
-            player!!.UIs().get(MainPlayerUi::class.java) == null ||
-            getRoot()?.parent == null
-        ) {
-            return
-        }
+        ifPlayer {
+            if (!isPlayerAndPlayerServiceAvailable() ||
+                player.UIs().get(MainPlayerUi::class.java) == null ||
+                videoPlayerRoot?.parent == null
+            ) {
+                return@ifPlayer
+            }
 
-        if (fullscreen) {
-            hideSystemUiIfNeeded()
-            binding!!.overlayPlayPauseButton.requestFocus()
-        } else {
-            showSystemUi()
-        }
+            if (fullscreen) {
+                hideSystemUiIfNeeded()
+                binding!!.overlayPlayPauseButton.requestFocus()
+            } else {
+                showSystemUi()
+            }
 
-        if (binding!!.relatedItemsLayout != null) {
-            binding!!.relatedItemsLayout!!.setVisibility(if (fullscreen) View.GONE else View.VISIBLE)
-        }
-        scrollToTop()
+            if (binding!!.relatedItemsLayout != null) {
+                binding!!.relatedItemsLayout!!.setVisibility(if (fullscreen) View.GONE else View.VISIBLE)
+            }
+            scrollToTop()
 
-        tryAddVideoPlayerView()
+            tryAddVideoPlayerView()
+        }
     }
 
     override fun onScreenRotationButtonClicked() {
@@ -2682,16 +2691,9 @@ class VideoDetailFragment :
         return player != null
     }
 
-    fun noPlayerServiceAvailable(): Boolean {
-        return playerService == null
-    }
-
     fun isPlayerAndPlayerServiceAvailable(): Boolean {
         return player != null && playerService != null
     }
-
-    fun getRoot(): View? =
-        player?.UIs()?.get(VideoPlayerUi::class.java)?.binding?.root
 
     private fun updateBottomSheetState(newState: Int) {
         bottomSheetState = newState
