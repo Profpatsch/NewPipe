@@ -31,7 +31,6 @@ import android.view.View
 import android.view.View.OnLongClickListener
 import android.view.View.OnTouchListener
 import android.view.ViewGroup
-import android.view.ViewParent
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
@@ -130,10 +129,8 @@ import java.util.ArrayList
 import java.util.LinkedList
 import java.util.List
 import java.util.Objects
-import java.util.Optional
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
-import java.util.function.Function
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -215,6 +212,7 @@ class VideoDetailFragment :
     private var pageAdapter: TabAdapter? = null
 
     private var settingsContentObserver: ContentObserver? = null
+
     private var playerService: PlayerService? = null
     private var player: Player? = null
 
@@ -231,29 +229,29 @@ class VideoDetailFragment :
         // It will do nothing if the player is not in fullscreen mode
         hideSystemUiIfNeeded()
 
-        val playerUi: Optional<MainPlayerUi> =
-            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-        if (!player!!.videoPlayerSelected() && !playAfterConnect) {
+        if (!connectedPlayerService.player.videoPlayerSelected() && !playAfterConnect) {
             return
         }
 
+        val playerUi: MainPlayerUi? =
+            connectedPlayerService.player.UIs().get(MainPlayerUi::class.java)
         if (DeviceUtils.isLandscape(requireContext())) {
             // If the video is playing but orientation changed
             // let's make the video in fullscreen again
             checkLandscape()
-        } else if (playerUi.map<Boolean?>(Function { ui: MainPlayerUi? -> ui!!.isFullscreen() && !ui.isVerticalVideo() })
-            .orElse(false) && // Tablet UI has orientation-independent fullscreen
+        } else if (playerUi != null && playerUi.isFullscreen && !playerUi.isVerticalVideo &&
+            // Tablet UI has orientation-independent fullscreen
             !DeviceUtils.isTablet(activity)
         ) {
             // Device is in portrait orientation after rotation but UI is in fullscreen.
             // Return back to non-fullscreen state
-            playerUi.ifPresent(Consumer { obj: MainPlayerUi? -> obj!!.toggleFullscreen() })
+            playerUi.toggleFullscreen()
         }
 
         if (playAfterConnect ||
             (
                 currentInfo != null && isAutoplayEnabled() &&
-                    playerUi.isEmpty()
+                    playerUi == null
                 )
         ) {
             autoPlayEnabled = true // forcefully start playing
@@ -561,16 +559,16 @@ class VideoDetailFragment :
         )
         binding!!.overlayPlayPauseButton.setOnClickListener(
             View.OnClickListener { v: View? ->
-                if (playerIsNotStopped()) {
-                    player!!.playPause()
-                    player!!.UIs().getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-                        .ifPresent(Consumer { ui: VideoPlayerUi? -> ui!!.hideControls(0, 0) })
-                    showSystemUi()
-                } else {
+                val p = player!!
+                if (p.isStopped) {
                     autoPlayEnabled = true // forcefully start playing
                     openVideoPlayer(false)
+                } else {
+                    p.playPause()
+                    p.UIs().get(VideoPlayerUi::class.java)?.hideControls(0, 0)
+                    showSystemUi()
                 }
-                setOverlayPlayPauseImage(isPlayerAvailable() && player!!.isPlaying())
+                setOverlayPlayPauseImage(isPlayerAvailable() && p.isPlaying)
             }
         )
     }
@@ -765,9 +763,7 @@ class VideoDetailFragment :
 
     override fun onKeyDown(keyCode: Int): Boolean {
         return isPlayerAvailable() &&
-            player!!.UIs().getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-                .map<Boolean?>(Function { playerUi: VideoPlayerUi? -> playerUi!!.onKeyDown(keyCode) })
-                .orElse(false)
+            player!!.UIs().get(VideoPlayerUi::class.java)?.onKeyDown(keyCode) == true
     }
 
     override fun onBackPressed(): Boolean {
@@ -1123,14 +1119,11 @@ class VideoDetailFragment :
         // If a user watched video inside fullscreen mode and than chose another player
         // return to non-fullscreen mode
         if (isPlayerAvailable()) {
-            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                .ifPresent(
-                    Consumer { playerUi: MainPlayerUi? ->
-                        if (playerUi!!.isFullscreen()) {
-                            playerUi.toggleFullscreen()
-                        }
-                    }
-                )
+            player!!.UIs().get(MainPlayerUi::class.java)?.let { playerUi ->
+                if (playerUi.isFullscreen) {
+                    playerUi.toggleFullscreen()
+                }
+            }
         }
     }
 
@@ -1272,17 +1265,18 @@ class VideoDetailFragment :
      * be reused in a few milliseconds and the flickering would be annoying.
      */
     private fun hideMainPlayerOnLoadingNewStream() {
-        val root = getRoot()
-        if (noPlayerServiceAvailable() || root.isEmpty() || !player!!.videoPlayerSelected()) {
-            return
-        }
+        getRoot()?.let { root ->
+            if (noPlayerServiceAvailable() || !player!!.videoPlayerSelected()) {
+                return
+            }
 
-        removeVideoPlayerView()
-        if (isAutoplayEnabled()) {
-            playerService!!.stopForImmediateReusing()
-            root.ifPresent(Consumer { view -> view.setVisibility(View.GONE) })
-        } else {
-            PlayerHolder.stopService()
+            removeVideoPlayerView()
+            if (isAutoplayEnabled()) {
+                playerService!!.stopForImmediateReusing()
+                root.visibility = View.GONE
+            } else {
+                PlayerHolder.stopService()
+            }
         }
     }
 
@@ -1365,29 +1359,22 @@ class VideoDetailFragment :
                 }
                 // setup the surface view height, so that it fits the video correctly
                 setHeightThumbnail()
-                player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                    .ifPresent(
-                        Consumer { playerUi: MainPlayerUi? ->
-                            // sometimes binding would be null here, even though getView() != null above u.u
-                            if (binding != null) {
-                                // prevent from re-adding a view multiple times
-                                playerUi!!.removeViewFromParent()
-                                binding!!.playerPlaceholder.addView(playerUi.getBinding().getRoot())
-                                playerUi.setupVideoSurfaceIfNeeded()
-                            }
-                        }
-                    )
+                player!!.UIs().get(MainPlayerUi::class.java)?.let { playerUi: MainPlayerUi ->
+                    // sometimes binding would be null here, even though getView() != null above u.u
+                    if (binding != null) {
+                        // prevent from re-adding a view multiple times
+                        playerUi.removeViewFromParent()
+                        binding!!.playerPlaceholder.addView(playerUi.getBinding().getRoot())
+                        playerUi.setupVideoSurfaceIfNeeded()
+                    }
+                }
             }
         )
     }
 
     private fun removeVideoPlayerView() {
         makeDefaultHeightForVideoPlaceholder()
-
-        if (player != null) {
-            player!!.UIs().getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-                .ifPresent(Consumer { obj: VideoPlayerUi? -> obj!!.removeViewFromParent() })
-        }
+        player?.UIs()?.get(VideoPlayerUi::class.java)?.removeViewFromParent()
     }
 
     private fun makeDefaultHeightForVideoPlaceholder() {
@@ -1463,15 +1450,12 @@ class VideoDetailFragment :
         binding!!.detailThumbnailImageView.setMinimumHeight(newHeight)
         if (isPlayerAvailable()) {
             val maxHeight = (metrics.heightPixels * MAX_PLAYER_HEIGHT).toInt()
-            player!!.UIs().getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-                .ifPresent(
-                    Consumer { ui: VideoPlayerUi? ->
-                        ui!!.getBinding().surfaceView.setHeights(
-                            newHeight,
-                            if (ui.isFullscreen()) newHeight else maxHeight
-                        )
-                    }
+            player!!.UIs().get(VideoPlayerUi::class.java)?.let { ui: VideoPlayerUi ->
+                ui.getBinding().surfaceView.setHeights(
+                    newHeight,
+                    if (ui.isFullscreen) newHeight else maxHeight
                 )
+            }
         }
     }
 
@@ -2052,8 +2036,8 @@ class VideoDetailFragment :
     override fun onFullscreenStateChanged(fullscreen: Boolean) {
         setupBrightness()
         if (!isPlayerAndPlayerServiceAvailable() ||
-            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java).isEmpty() ||
-            getRoot().map<ViewParent?>(Function { obj: View? -> obj!!.getParent() }).isEmpty()
+            player!!.UIs().get(MainPlayerUi::class.java) == null ||
+            getRoot()?.parent == null
         ) {
             return
         }
@@ -2082,8 +2066,7 @@ class VideoDetailFragment :
         if (DeviceUtils.isTablet(activity) &&
             (!PlayerHelper.globalScreenOrientationLocked(activity) || isLandscape)
         ) {
-            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                .ifPresent(Consumer { obj: MainPlayerUi? -> obj!!.toggleFullscreen() })
+            player!!.UIs().get(MainPlayerUi::class.java)?.toggleFullscreen()
             return
         }
 
@@ -2190,8 +2173,7 @@ class VideoDetailFragment :
 
     private fun isFullscreen(): Boolean {
         return isPlayerAvailable() && player!!.UIs()
-            .getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-            .map<Boolean?>(Function { obj: VideoPlayerUi? -> obj!!.isFullscreen() }).orElse(false)
+            .get(VideoPlayerUi::class.java)?.isFullscreen == true
     }
 
     private fun playerIsNotStopped(): Boolean {
@@ -2276,8 +2258,7 @@ class VideoDetailFragment :
             setAutoPlay(true)
         }
 
-        player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-            .ifPresent(Consumer { obj: MainPlayerUi? -> obj!!.checkLandscape() })
+        player!!.UIs().get(MainPlayerUi::class.java)?.checkLandscape()
         // Let's give a user time to look at video information page if video is not playing
         if (PlayerHelper.globalScreenOrientationLocked(activity) && !player!!.isPlaying()) {
             player!!.play()
@@ -2575,8 +2556,7 @@ class VideoDetailFragment :
                             !isFullscreen() &&
                             !DeviceUtils.isTablet(activity)
                         ) {
-                            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                                .ifPresent(Consumer { obj: MainPlayerUi? -> obj!!.toggleFullscreen() })
+                            player!!.UIs().get(MainPlayerUi::class.java)?.toggleFullscreen()
                         }
                         setOverlayLook(binding!!.appBarLayout, behavior, 1f)
                     }
@@ -2590,8 +2570,7 @@ class VideoDetailFragment :
                         // Re-enable clicks
                         setOverlayElementsClickable(true)
                         if (isPlayerAvailable()) {
-                            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                                .ifPresent(Consumer { obj: MainPlayerUi? -> obj!!.closeItemsList() })
+                            player!!.UIs().get(MainPlayerUi::class.java)?.closeItemsList()
                         }
                         setOverlayLook(binding!!.appBarLayout, behavior, 0f)
                     }
@@ -2601,14 +2580,12 @@ class VideoDetailFragment :
                             showSystemUi()
                         }
                         if (isPlayerAvailable()) {
-                            player!!.UIs().getOpt<MainPlayerUi>(MainPlayerUi::class.java)
-                                .ifPresent(
-                                    Consumer { ui: MainPlayerUi? ->
-                                        if (ui!!.isControlsVisible()) {
-                                            ui.hideControls(0, 0)
-                                        }
-                                    }
-                                )
+                            player!!.UIs().get(MainPlayerUi::class.java)?.let {
+                                    ui: MainPlayerUi ->
+                                if (ui.isControlsVisible) {
+                                    ui.hideControls(0, 0)
+                                }
+                            }
                         }
                     }
 
@@ -2712,15 +2689,8 @@ class VideoDetailFragment :
         return player != null && playerService != null
     }
 
-    fun getRoot(): Optional<View?> {
-        return Optional.ofNullable<Player?>(player)
-            .flatMap<VideoPlayerUi?>(
-                Function { player1: Player? ->
-                    player1!!.UIs().getOpt<VideoPlayerUi>(VideoPlayerUi::class.java)
-                }
-            )
-            .map<View?>(Function { playerUi: VideoPlayerUi? -> playerUi!!.getBinding().getRoot() })
-    }
+    fun getRoot(): View? =
+        player?.UIs()?.get(VideoPlayerUi::class.java)?.binding?.root
 
     private fun updateBottomSheetState(newState: Int) {
         bottomSheetState = newState
