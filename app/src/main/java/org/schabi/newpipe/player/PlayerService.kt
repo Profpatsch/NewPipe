@@ -37,6 +37,10 @@ import java.lang.ref.WeakReference
  * this allows us to keep playing even when switching between the different UIs.
  */
 class PlayerService : Service() {
+
+    /** The player held by this service;
+     * it is always initialized in the service, but of course the Player itself has a lifecycle
+     * (e.g. [Player.destroyPlayer] could have been called). */
     lateinit var player: Player
         private set
 
