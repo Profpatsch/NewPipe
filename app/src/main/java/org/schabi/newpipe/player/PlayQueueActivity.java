@@ -97,8 +97,44 @@ public final class PlayQueueActivity extends AppCompatActivity
             getSupportActionBar().setTitle(R.string.title_activity_play_queue);
         }
 
-        serviceConnection = getServiceConnection();
-        bind();
+        serviceConnection = new ServiceConnection() {
+            @Override
+            public void onServiceDisconnected(final ComponentName name) {
+                Log.d(TAG, "Player service is disconnected");
+            }
+
+            @Override
+            public void onServiceConnected(final ComponentName name, final IBinder binder) {
+                Log.d(TAG, "Player service is connected");
+
+                if (binder instanceof PlayerService.LocalBinder localBinder) {
+                    final PlayerService playerService = localBinder.getService();
+                    if (playerService == null) {
+                        throw new IllegalArgumentException(
+                                "PlayerService.LocalBinder.getService() must never be"
+                                        + "null after the service connects");
+                    }
+                    player = playerService.getPlayer();
+                }
+
+                if (player == null || player.getPlayQueue() == null || player.exoPlayerIsNull()) {
+                    unbind();
+                } else {
+                    onQueueUpdate(player.getPlayQueue());
+                    buildComponents();
+                    if (player != null) {
+                        player.setActivityListener(PlayQueueActivity.this);
+                    }
+                }
+            }
+        };
+
+        final Intent bindIntent = new Intent(this, PlayerService.class);
+        final boolean success = bindService(bindIntent, serviceConnection, BIND_AUTO_CREATE);
+        if (!success) {
+            unbindService(serviceConnection);
+        }
+        serviceBound = success;
     }
 
     @Override
@@ -182,15 +218,6 @@ public final class PlayQueueActivity extends AppCompatActivity
     // Service Connection
     ////////////////////////////////////////////////////////////////////////////
 
-    private void bind() {
-        final Intent bindIntent = new Intent(this, PlayerService.class);
-        final boolean success = bindService(bindIntent, serviceConnection, BIND_AUTO_CREATE);
-        if (!success) {
-            unbindService(serviceConnection);
-        }
-        serviceBound = success;
-    }
-
     private void unbind() {
         if (serviceBound) {
             unbindService(serviceConnection);
@@ -207,40 +234,6 @@ public final class PlayQueueActivity extends AppCompatActivity
             itemTouchHelper = null;
             player = null;
         }
-    }
-
-    private ServiceConnection getServiceConnection() {
-        return new ServiceConnection() {
-            @Override
-            public void onServiceDisconnected(final ComponentName name) {
-                Log.d(TAG, "Player service is disconnected");
-            }
-
-            @Override
-            public void onServiceConnected(final ComponentName name, final IBinder binder) {
-                Log.d(TAG, "Player service is connected");
-
-                if (binder instanceof PlayerService.LocalBinder localBinder) {
-                    final PlayerService playerService = localBinder.getService();
-                    if (playerService == null) {
-                        throw new IllegalArgumentException(
-                                "PlayerService.LocalBinder.getService() must never be"
-                                        + "null after the service connects");
-                    }
-                    player = playerService.getPlayer();
-                }
-
-                if (player == null || player.getPlayQueue() == null || player.exoPlayerIsNull()) {
-                    unbind();
-                } else {
-                    onQueueUpdate(player.getPlayQueue());
-                    buildComponents();
-                    if (player != null) {
-                        player.setActivityListener(PlayQueueActivity.this);
-                    }
-                }
-            }
-        };
     }
 
     ////////////////////////////////////////////////////////////////////////////
