@@ -31,6 +31,9 @@ import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.ThemeHelper
 import java.lang.ref.WeakReference
 
+private val TAG: String = PlayerService::class.java.getSimpleName()
+private val DEBUG = Player.DEBUG
+
 /**
  * One background service for our player. Even though the player has multiple UIs
  * (e.g. the audio-only UI, the main UI, the pulldown-menu UI),
@@ -43,8 +46,6 @@ class PlayerService : Service() {
      * (e.g. [Player.destroyPlayer] could have been called). */
     lateinit var player: Player
         private set
-
-    private val mBinder: IBinder = LocalBinder(this)
 
     /*//////////////////////////////////////////////////////////////////////////
     // Service's LifeCycle
@@ -150,10 +151,6 @@ class PlayerService : Service() {
         super.attachBaseContext(AudioServiceLeakFix.preventLeakOf(base))
     }
 
-    override fun onBind(intent: Intent?): IBinder {
-        return mBinder
-    }
-
     /** Allows us this [PlayerService] over the Service boundary
      * back to our [org.schabi.newpipe.player.helper.PlayerHolder].
      */
@@ -169,8 +166,8 @@ class PlayerService : Service() {
         }
     }
 
-    companion object {
-        private val TAG: String = PlayerService::class.java.getSimpleName()
-        private val DEBUG = Player.DEBUG
+    private val mBinder: IBinder = LocalBinder(this)
+    override fun onBind(intent: Intent?): IBinder {
+        return mBinder
     }
 }
