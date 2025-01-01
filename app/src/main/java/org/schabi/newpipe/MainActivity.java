@@ -808,7 +808,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        if (PlayerHolder.Companion.getInstance().isPlayerOpen()) {
+        if (PlayerHolder.INSTANCE.isPlayerOpen()) {
             // if the player is already open, no need for a broadcast receiver
             openMiniPlayerIfMissing();
         } else {
