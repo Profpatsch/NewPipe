@@ -38,6 +38,7 @@ class PlayerHolder private constructor() {
 
     private var playerService: PlayerService? = null
     private var player: Player? = null
+        get() = playerService?.player
 
     /**
      * Returns the current [PlayerType] of the [PlayerService] service,
@@ -52,35 +53,25 @@ class PlayerHolder private constructor() {
         player?.isPlaying == true
 
     fun isPlayerOpen(): Boolean =
-        player != null
+        playerService != null
 
     /**
      * Use this method to only allow the user to manipulate the play queue (e.g. by enqueueing via
      * the stream long press menu) when there actually is a play queue to manipulate.
      * @return true only if the player is open and its play queue is ready (i.e. it is not null)
      */
-    fun isPlayQueueReady(): Boolean {
-        return player != null && player!!.playQueue != null
-    }
+    fun isPlayQueueReady(): Boolean =
+        player?.playQueue != null
 
     fun isNotBoundYet(): Boolean {
         return !bound
     }
 
-    fun getQueueSize(): Int {
-        if (player == null || player!!.playQueue == null) {
-            // player play queue might be null e.g. while player is starting
-            return 0
-        }
-        return player!!.playQueue!!.size()
-    }
+    fun getQueueSize(): Int =
+        player?.playQueue?.size() ?: 0
 
-    fun getQueuePosition(): Int {
-        if (player == null || player!!.playQueue == null) {
-            return 0
-        }
-        return player!!.playQueue!!.index
-    }
+    fun getQueuePosition(): Int =
+        player?.playQueue?.index ?: 0
 
     /**
      * Helper to handle context in common place as using the same
@@ -110,9 +101,9 @@ class PlayerHolder private constructor() {
         listeners = Listeners(newListener, newHolderListener)
 
         // Force reload data from service
-        if (player != null) {
+        player?.let { player ->
             newHolderListener.onServiceConnected(playerService, false)
-            player!!.setFragmentListener(internalListener)
+            player.setFragmentListener(internalListener)
         }
         if (bound) {
             return
@@ -158,11 +149,8 @@ class PlayerHolder private constructor() {
         if (bound) {
             context.unbindService(serviceConnection)
             bound = false
-            if (player != null) {
-                player!!.removeFragmentListener(internalListener)
-            }
+            player?.removeFragmentListener(internalListener)
             playerService = null
-            player = null
             listeners?.holderListener?.onServiceDisconnected()
         }
     }
@@ -193,7 +181,6 @@ class PlayerHolder private constructor() {
             requireNotNull(playerService) {
                 "PlayerService.LocalBinder.getService() must never be null after the service connects"
             }
-            player = playerService!!.player
             listeners?.holderListener?.onServiceConnected(playerService, playAfterConnect)
             player?.setFragmentListener(internalListener)
         }
