@@ -26,12 +26,14 @@ data class Listeners(
     val holderListener: PlayerHolderLifecycleEventListener
 )
 
+private val DEBUG = MainActivity.DEBUG
+private val TAG: String = PlayerHolder::class.java.getSimpleName()
+
 /** Singleton that manages a `PlayerService`
  * and can be used to control the player instance through the service.  */
-class PlayerHolder private constructor() {
+object PlayerHolder {
     private var listeners: Listeners? = null
 
-    private val serviceConnection = PlayerServiceConnection()
     private var bound = false
 
     private var playerService: PlayerService? = null
@@ -99,7 +101,7 @@ class PlayerHolder private constructor() {
         // Force reload data from service
         player?.let { player ->
             newHolderListener.onServiceConnected(playerService, false)
-            player.setFragmentListener(internalListener)
+            player.setFragmentListener(HolderPlayerServiceEventListener)
         }
         if (bound) {
             return
@@ -109,7 +111,7 @@ class PlayerHolder private constructor() {
         // bound twice. Prevent it with unbinding first
         unbind(context)
         ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
-        serviceConnection.playAfterConnect = playAfterConnect
+        PlayerServiceConnection.playAfterConnect = playAfterConnect
 
         if (DEBUG) {
             Log.d(TAG, "bind() called")
@@ -117,11 +119,11 @@ class PlayerHolder private constructor() {
 
         val serviceIntent = Intent(context, PlayerService::class.java)
         bound = context.bindService(
-            serviceIntent, serviceConnection,
+            serviceIntent, PlayerServiceConnection,
             Context.BIND_AUTO_CREATE
         )
         if (!bound) {
-            context.unbindService(serviceConnection)
+            context.unbindService(PlayerServiceConnection)
         }
     }
 
@@ -142,9 +144,9 @@ class PlayerHolder private constructor() {
         }
 
         if (bound) {
-            context.unbindService(serviceConnection)
+            context.unbindService(PlayerServiceConnection)
             bound = false
-            player?.removeFragmentListener(internalListener)
+            player?.removeFragmentListener(HolderPlayerServiceEventListener)
             playerService = null
             listeners?.holderListener?.onServiceDisconnected()
         }
@@ -154,7 +156,7 @@ class PlayerHolder private constructor() {
         listeners = null
     }
 
-    internal inner class PlayerServiceConnection : ServiceConnection {
+    internal object PlayerServiceConnection : ServiceConnection {
         var playAfterConnect = false
 
         override fun onServiceDisconnected(compName: ComponentName?) {
@@ -177,7 +179,7 @@ class PlayerHolder private constructor() {
                 "PlayerService.LocalBinder.getService() must never be null after the service connects"
             }
             listeners?.holderListener?.onServiceConnected(playerService, playAfterConnect)
-            player?.setFragmentListener(internalListener)
+            player?.setFragmentListener(HolderPlayerServiceEventListener)
         }
     }
 
@@ -185,7 +187,7 @@ class PlayerHolder private constructor() {
      * Only difference is that if [PlayerServiceEventListener.onServiceStopped] is called,
      * it also calls [PlayerHolder.unbind].
      */
-    private val internalListener: PlayerServiceEventListener = object : PlayerServiceEventListener {
+    private object HolderPlayerServiceEventListener : PlayerServiceEventListener {
         override fun onViewCreated() {
             listeners?.listener?.onViewCreated()
         }
@@ -242,21 +244,5 @@ class PlayerHolder private constructor() {
             listeners?.listener?.onServiceStopped()
             unbind(getCommonContext())
         }
-    }
-
-    companion object {
-        private var instance: PlayerHolder? = null
-
-        @JvmStatic
-        @Synchronized
-        fun getInstance(): PlayerHolder {
-            if (instance == null) {
-                instance = PlayerHolder()
-            }
-            return instance!!
-        }
-
-        private val DEBUG = MainActivity.DEBUG
-        private val TAG: String = PlayerHolder::class.java.getSimpleName()
     }
 }

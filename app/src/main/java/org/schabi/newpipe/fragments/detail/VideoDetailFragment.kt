@@ -101,7 +101,7 @@ import org.schabi.newpipe.player.event.OnKeyDownListener
 import org.schabi.newpipe.player.event.PlayerHolderLifecycleEventListener
 import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.helper.PlayerHelper
-import org.schabi.newpipe.player.helper.PlayerHolder.Companion.getInstance
+import org.schabi.newpipe.player.helper.PlayerHolder
 import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.player.playqueue.events.PlayQueueEvent
@@ -217,7 +217,6 @@ class VideoDetailFragment :
     private var settingsContentObserver: ContentObserver? = null
     private var playerService: PlayerService? = null
     private var player: Player? = null
-    private val playerHolder = getInstance()
 
     /*//////////////////////////////////////////////////////////////////////////
     // Service management
@@ -363,9 +362,9 @@ class VideoDetailFragment :
         // Stop the service when user leaves the app with double back press
         // if video player is selected. Otherwise unbind
         if (activity.isFinishing() && isPlayerAvailable() && player!!.videoPlayerSelected()) {
-            playerHolder.stopService()
+            PlayerHolder.stopService()
         } else {
-            playerHolder.unsetListeners()
+            PlayerHolder.unsetListeners()
         }
 
         PreferenceManager.getDefaultSharedPreferences(activity)
@@ -757,10 +756,10 @@ class VideoDetailFragment :
         )
 
         setupBottomPlayer()
-        if (playerHolder.isNotBoundYet()) {
+        if (PlayerHolder.isNotBoundYet()) {
             setHeightThumbnail()
         } else {
-            playerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, this, this)
         }
     }
 
@@ -1161,7 +1160,7 @@ class VideoDetailFragment :
 
         // See UI changes while remote playQueue changes
         if (!isPlayerAvailable()) {
-            playerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, this, this)
         } else {
             // FIXME Workaround #7427
             player!!.setRecovery()
@@ -1230,7 +1229,7 @@ class VideoDetailFragment :
     private fun openNormalBackgroundPlayer(append: Boolean) {
         // See UI changes while remote playQueue changes
         if (!isPlayerAvailable()) {
-            playerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, this, this)
         }
 
         val queue = setupPlayQueueForIntent(append)
@@ -1248,7 +1247,7 @@ class VideoDetailFragment :
 
     private fun openMainPlayer() {
         if (noPlayerServiceAvailable()) {
-            playerHolder.startService(autoPlayEnabled, this, this)
+            PlayerHolder.startService(autoPlayEnabled, this, this)
             return
         }
         if (currentInfo == null) {
@@ -1283,7 +1282,7 @@ class VideoDetailFragment :
             playerService!!.stopForImmediateReusing()
             root.ifPresent(Consumer { view -> view.setVisibility(View.GONE) })
         } else {
-            playerHolder.stopService()
+            PlayerHolder.stopService()
         }
     }
 
@@ -1540,8 +1539,8 @@ class VideoDetailFragment :
                             bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_COLLAPSED)
                         }
                         // Rebound to the service if it was closed via notification or mini player
-                        if (playerHolder.isNotBoundYet()) {
-                            playerHolder.startService(
+                        if (PlayerHolder.isNotBoundYet()) {
+                            PlayerHolder.startService(
                                 false,
                                 this@VideoDetailFragment,
                                 this@VideoDetailFragment
@@ -2456,7 +2455,7 @@ class VideoDetailFragment :
         if (currentWorker != null) {
             currentWorker!!.dispose()
         }
-        playerHolder.stopService()
+        PlayerHolder.stopService()
         setInitialData(0, null, "", null)
         currentInfo = null
         updateOverlayData(null, null, mutableListOf<Image>())
