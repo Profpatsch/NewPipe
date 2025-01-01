@@ -173,13 +173,13 @@ object PlayerHolder {
                 Log.d(TAG, "Player service is connected")
             }
             val localBinder = service as LocalBinder
-
-            playerService = localBinder.getService()
-            requireNotNull(playerService) {
+            val service = localBinder.getService()
+            requireNotNull(service) {
                 "PlayerService.LocalBinder.getService() must never be null after the service connects"
             }
-            listeners?.holderListener?.onServiceConnected(playerService, playAfterConnect)
-            player?.setFragmentListener(HolderPlayerServiceEventListener)
+            listeners?.holderListener?.onServiceConnected(service, playAfterConnect)
+            service.player.setFragmentListener(HolderPlayerServiceEventListener)
+            playerService = service
         }
     }
 
