@@ -7,7 +7,6 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
@@ -109,18 +108,6 @@ public final class PlayerHolder {
         holderListener = null;
     }
 
-    public void setListener(@NonNull final PlayerServiceEventListener newListener,
-                            @NonNull final PlayerHolderLifecycleEventListener newHolderListener) {
-        listener = newListener;
-        holderListener = newHolderListener;
-
-        // Force reload data from service
-        if (player != null) {
-            holderListener.onServiceConnected(playerService, false);
-            player.setFragmentListener(internalListener);
-        }
-    }
-
     /** Helper to handle context in common place as using the same
      * context to bind/unbind a service is crucial.
      *
@@ -143,7 +130,14 @@ public final class PlayerHolder {
                              final PlayerHolderLifecycleEventListener newHolderListener
     ) {
         final Context context = getCommonContext();
-        setListener(newListener, newHolderListener);
+        listener = newListener;
+        holderListener = newHolderListener;
+
+        // Force reload data from service
+        if (player != null) {
+            holderListener.onServiceConnected(playerService, false);
+            player.setFragmentListener(internalListener);
+        }
         if (bound) {
             return;
         }
