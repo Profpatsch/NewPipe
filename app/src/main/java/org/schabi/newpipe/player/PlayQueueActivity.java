@@ -221,12 +221,13 @@ public final class PlayQueueActivity extends AppCompatActivity
                 Log.d(TAG, "Player service is connected");
 
                 if (binder instanceof PlayerService.LocalBinder localBinder) {
-                    final @Nullable PlayerService s = localBinder.getService();
-                    if (s == null) {
-                        player = null;
-                    } else {
-                        player = s.getPlayer();
+                    final PlayerService playerService = localBinder.getService();
+                    if (playerService == null) {
+                        throw new IllegalArgumentException(
+                                "PlayerService.LocalBinder.getService() must never be"
+                                        + "null after the service connects");
                     }
+                    player = playerService.getPlayer();
                 }
 
                 if (player == null || player.getPlayQueue() == null || player.exoPlayerIsNull()) {

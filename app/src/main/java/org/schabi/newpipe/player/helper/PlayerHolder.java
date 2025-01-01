@@ -213,7 +213,12 @@ public final class PlayerHolder {
             final PlayerService.LocalBinder localBinder = (PlayerService.LocalBinder) service;
 
             playerService = localBinder.getService();
-            player = playerService != null ? playerService.getPlayer() : null;
+            if (playerService == null) {
+                throw new IllegalArgumentException(
+                        "PlayerService.LocalBinder.getService() must never be"
+                        + "null after the service connects");
+            }
+            player = playerService.getPlayer();
 
             if (holderListener != null) {
                 holderListener.onServiceConnected(playerService, playAfterConnect);

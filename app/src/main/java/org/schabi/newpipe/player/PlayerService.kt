@@ -153,9 +153,9 @@ class PlayerService : Service() {
     /** Allows us this [PlayerService] over the Service boundary
      * back to our [org.schabi.newpipe.player.helper.PlayerHolder].
      */
-    class LocalBinder internal constructor(playerService: PlayerService?) : Binder() {
-        private val playerService: WeakReference<PlayerService?> =
-            WeakReference<PlayerService?>(playerService)
+    class LocalBinder internal constructor(playerService: PlayerService) : Binder() {
+        private val playerService: WeakReference<PlayerService> =
+            WeakReference<PlayerService>(playerService)
 
         /** Get the PlayerService object itself.
          * @return this
