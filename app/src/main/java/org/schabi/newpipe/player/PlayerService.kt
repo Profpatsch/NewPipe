@@ -127,7 +127,7 @@ class PlayerService : Service() {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        if (!player.videoPlayerSelected()) {
+        if (!player.isVideoPlayerSelected()) {
             return
         }
         onDestroy()

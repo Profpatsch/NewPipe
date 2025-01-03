@@ -62,7 +62,7 @@ public final class NotificationPlayerUi extends PlayerUi {
 
         // Remove running notification when user does not want minimization to background or popup
         if (PlayerHelper.getMinimizeOnExitAction(context) == MINIMIZE_ON_EXIT_MODE_NONE
-                && player.videoPlayerSelected()) {
+                && player.isVideoPlayerSelected()) {
             notificationUtil.cancelNotificationAndStopForeground();
         } else {
             notificationUtil.createNotificationIfNeededAndUpdate(false);

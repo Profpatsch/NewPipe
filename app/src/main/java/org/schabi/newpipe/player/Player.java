@@ -306,7 +306,7 @@ public final class Player implements PlaybackListener, Listener {
         return new VideoPlaybackResolver.QualityResolver() {
             @Override
             public int getDefaultResolutionIndex(final List<VideoStream> sortedVideos) {
-                return videoPlayerSelected()
+                return isVideoPlayerSelected()
                         ? ListHelper.getDefaultResolutionIndex(context, sortedVideos)
                         : ListHelper.getPopupDefaultResolutionIndex(context, sortedVideos);
             }
@@ -314,7 +314,7 @@ public final class Player implements PlaybackListener, Listener {
             @Override
             public int getOverrideResolutionIndex(final List<VideoStream> sortedVideos,
                                                   final String playbackQuality) {
-                return videoPlayerSelected()
+                return isVideoPlayerSelected()
                         ? getResolutionIndex(context, sortedVideos, playbackQuality)
                         : getPopupResolutionIndex(context, sortedVideos, playbackQuality);
             }
@@ -2252,7 +2252,7 @@ public final class Player implements PlaybackListener, Listener {
         return playerType == PlayerType.AUDIO;
     }
 
-    public boolean videoPlayerSelected() {
+    public boolean isVideoPlayerSelected() {
         return playerType == PlayerType.MAIN;
     }
 
