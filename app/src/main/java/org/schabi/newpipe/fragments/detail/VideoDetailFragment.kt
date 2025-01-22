@@ -252,7 +252,7 @@ class VideoDetailFragment :
         ) {
             // Device is in portrait orientation after rotation but UI is in fullscreen.
             // Return back to non-fullscreen state
-            playerUi.toggleFullscreen()
+            playerUi.exitFullscreen()
         }
 
         if (playAfterConnect ||
@@ -1202,7 +1202,7 @@ class VideoDetailFragment :
             // restored (i.e. bottomSheetState) to STATE_EXPANDED.
             updateBottomSheetState(BottomSheetBehavior.STATE_EXPANDED)
             // toggle landscape in order to open directly in fullscreen
-            onScreenRotationButtonClicked()
+            onFullscreenToggleButtonClicked()
         }
 
         if (PreferenceManager.getDefaultSharedPreferences(activity)
@@ -2066,7 +2066,7 @@ class VideoDetailFragment :
         }
     }
 
-    override fun onScreenRotationButtonClicked() {
+    override fun onFullscreenToggleButtonClicked() {
         // In tablet user experience will be better if screen will not be rotated
         // from landscape to portrait every time.
         // Just turn on fullscreen mode in landscape orientation
@@ -2566,7 +2566,7 @@ class VideoDetailFragment :
                             !isFullscreen() &&
                             !DeviceUtils.isTablet(activity)
                         ) {
-                            player!!.UIs().get(MainPlayerUi::class.java)?.toggleFullscreen()
+                            player!!.UIs().get(MainPlayerUi::class.java)?.enterFullscreen()
                         }
                         setOverlayLook(binding!!.appBarLayout, behavior, 1f)
                     }

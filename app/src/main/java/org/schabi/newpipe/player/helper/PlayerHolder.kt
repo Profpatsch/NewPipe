@@ -202,8 +202,8 @@ object PlayerHolder {
             listeners?.listener?.onFullscreenStateChanged(fullscreen)
         }
 
-        override fun onScreenRotationButtonClicked() {
-            listeners?.listener?.onScreenRotationButtonClicked()
+        override fun onFullscreenToggleButtonClicked() {
+            listeners?.listener?.onFullscreenToggleButtonClicked()
         }
 
         override fun onMoreOptionsLongClicked() {
