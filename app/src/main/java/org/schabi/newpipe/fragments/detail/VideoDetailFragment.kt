@@ -136,7 +136,7 @@ import kotlin.math.min
 
 class VideoDetailFragment :
 
-    BaseStateFragment<StreamInfo?>(),
+    BaseStateFragment<StreamInfo>(),
     BackPressable,
     PlayerServiceEventListener,
     PlayerHolderLifecycleEventListener,
@@ -461,8 +461,8 @@ class VideoDetailFragment :
         binding!!.detailTitleRootLayout.setOnClickListener(View.OnClickListener { v: View? -> toggleTitleAndSecondaryControls() })
         binding!!.detailUploaderRootLayout.setOnClickListener(
             makeOnClickListener(
-                Consumer { info: StreamInfo? ->
-                    if (TextUtils.isEmpty(info!!.subChannelUrl)) {
+                Consumer { info: StreamInfo ->
+                    if (TextUtils.isEmpty(info.subChannelUrl)) {
                         if (!TextUtils.isEmpty(info.uploaderUrl)) {
                             openChannel(info.uploaderUrl, info.uploaderName)
                         }
@@ -503,7 +503,7 @@ class VideoDetailFragment :
         )
         binding!!.detailControlsPlaylistAppend.setOnClickListener(
             makeOnClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     if (getFM() != null && currentInfo != null) {
                         val fragment = getParentFragmentManager().findFragmentById(R.id.fragment_holder)
 
@@ -517,7 +517,7 @@ class VideoDetailFragment :
                         disposables.add(
                             PlaylistDialog.createCorrespondingDialog(
                                 requireContext(),
-                                List.of<StreamEntity?>(StreamEntity(info!!)),
+                                List.of<StreamEntity?>(StreamEntity(info)),
                                 Consumer { dialog: PlaylistDialog? ->
                                     dialog!!.show(
                                         getParentFragmentManager(),
@@ -543,9 +543,9 @@ class VideoDetailFragment :
         )
         binding!!.detailControlsShare.setOnClickListener(
             makeOnClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     ShareUtils.shareText(
-                        requireContext(), info!!.name, info.url,
+                        requireContext(), info.name, info.url,
                         info.thumbnails
                     )
                 }
@@ -553,20 +553,20 @@ class VideoDetailFragment :
         )
         binding!!.detailControlsOpenInBrowser.setOnClickListener(
             makeOnClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     ShareUtils.openUrlInBrowser(
                         requireContext(),
-                        info!!.url
+                        info.url
                     )
                 }
             )
         )
         binding!!.detailControlsPlayWithKodi.setOnClickListener(
             makeOnClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     KoreUtils.playWithKore(
                         requireContext(),
-                        Uri.parse(info!!.url)
+                        Uri.parse(info.url)
                     )
                 }
             )
@@ -619,10 +619,11 @@ class VideoDetailFragment :
         )
     }
 
-    private fun makeOnClickListener(consumer: Consumer<StreamInfo?>): View.OnClickListener {
+    private fun makeOnClickListener(consumer: Consumer<StreamInfo>): View.OnClickListener {
         return View.OnClickListener { v: View? ->
-            if (!isLoading.get() && currentInfo != null) {
-                consumer.accept(currentInfo)
+            val ci = currentInfo
+            if (!isLoading.get() && ci != null) {
+                consumer.accept(ci)
             }
         }
     }
@@ -630,7 +631,7 @@ class VideoDetailFragment :
     private fun setOnLongClickListeners() {
         binding!!.detailTitleRootLayout.setOnLongClickListener(
             makeOnLongClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     ShareUtils.copyToClipboard(
                         requireContext(),
                         binding!!.detailVideoTitleView.getText().toString()
@@ -640,8 +641,8 @@ class VideoDetailFragment :
         )
         binding!!.detailUploaderRootLayout.setOnLongClickListener(
             makeOnLongClickListener(
-                Consumer { info: StreamInfo? ->
-                    if (TextUtils.isEmpty(info!!.subChannelUrl)) {
+                Consumer { info: StreamInfo ->
+                    if (TextUtils.isEmpty(info.subChannelUrl)) {
                         Log.w(TAG, "Can't open parent channel because we got no parent channel URL")
                     } else {
                         openChannel(info.uploaderUrl, info.uploaderName)
@@ -652,7 +653,7 @@ class VideoDetailFragment :
 
         binding!!.detailControlsBackground.setOnLongClickListener(
             makeOnLongClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     openBackgroundPlayer(
                         true
                     )
@@ -661,7 +662,7 @@ class VideoDetailFragment :
         )
         binding!!.detailControlsPopup.setOnLongClickListener(
             makeOnLongClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     openPopupPlayer(
                         true
                     )
@@ -670,7 +671,7 @@ class VideoDetailFragment :
         )
         binding!!.detailControlsDownload.setOnLongClickListener(
             makeOnLongClickListener(
-                Consumer { info: StreamInfo? ->
+                Consumer { info: StreamInfo ->
                     NavigationHelper.openDownloads(
                         activity
                     )
@@ -679,9 +680,9 @@ class VideoDetailFragment :
         )
 
         val overlayListener = makeOnLongClickListener(
-            Consumer { info: StreamInfo? ->
+            Consumer { info: StreamInfo ->
                 openChannel(
-                    info!!.uploaderUrl,
+                    info.uploaderUrl,
                     info.uploaderName
                 )
             }
@@ -690,12 +691,13 @@ class VideoDetailFragment :
         binding!!.overlayMetadataLayout.setOnLongClickListener(overlayListener)
     }
 
-    private fun makeOnLongClickListener(consumer: Consumer<StreamInfo?>): OnLongClickListener {
+    private fun makeOnLongClickListener(consumer: Consumer<StreamInfo>): OnLongClickListener {
         return OnLongClickListener { v: View? ->
-            if (isLoading.get() || currentInfo == null) {
+            val ci = currentInfo
+            if (isLoading.get() || ci == null) {
                 return@OnLongClickListener false
             }
-            consumer.accept(currentInfo)
+            consumer.accept(ci)
             true
         }
     }
@@ -983,10 +985,10 @@ class VideoDetailFragment :
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
-                io.reactivex.rxjava3.functions.Consumer { result: StreamInfo? ->
+                io.reactivex.rxjava3.functions.Consumer { result: StreamInfo ->
                     isLoading.set(false)
                     hideMainPlayerOnLoadingNewStream()
-                    if (result!!.ageLimit != StreamExtractor.NO_AGE_LIMIT && !prefs.getBoolean(
+                    if (result.ageLimit != StreamExtractor.NO_AGE_LIMIT && !prefs.getBoolean(
                             getString(R.string.show_age_restricted_content), false
                         )
                     ) {
@@ -1662,11 +1664,11 @@ class VideoDetailFragment :
         binding!!.detailSubChannelThumbnailView.setImageBitmap(null)
     }
 
-    override fun handleResult(info: StreamInfo?) {
+    override fun handleResult(info: StreamInfo) {
         super.handleResult(info)
 
         currentInfo = info
-        setInitialData(info!!.serviceId, info.originalUrl, info.name, playQueue)
+        setInitialData(info.serviceId, info.originalUrl, info.name, playQueue)
 
         updateTabs(info)
 
