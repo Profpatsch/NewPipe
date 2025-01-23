@@ -460,21 +460,21 @@ class VideoDetailFragment :
     private fun setOnClickListeners() {
         binding!!.detailTitleRootLayout.setOnClickListener(View.OnClickListener { v: View? -> toggleTitleAndSecondaryControls() })
         binding!!.detailUploaderRootLayout.setOnClickListener(
-            makeOnClickListener(
-                Consumer { info: StreamInfo ->
-                    if (TextUtils.isEmpty(info.subChannelUrl)) {
-                        if (!TextUtils.isEmpty(info.uploaderUrl)) {
-                            openChannel(info.uploaderUrl, info.uploaderName)
-                        }
-
-                        if (DEBUG) {
-                            Log.i(TAG, "Can't open sub-channel because we got no channel URL")
-                        }
-                    } else {
-                        openChannel(info.subChannelUrl, info.subChannelName)
+            makeOnClickListener
+            { info: StreamInfo ->
+                if (TextUtils.isEmpty(info.subChannelUrl)) {
+                    if (!TextUtils.isEmpty(info.uploaderUrl)) {
+                        openChannel(info.uploaderUrl, info.uploaderName)
                     }
+
+                    if (DEBUG) {
+                        Log.i(TAG, "Can't open sub-channel because we got no channel URL")
+                    }
+                } else {
+                    openChannel(info.subChannelUrl, info.subChannelName)
                 }
-            )
+            }
+
         )
         binding!!.detailThumbnailRootLayout.setOnClickListener(
             View.OnClickListener { v: View? ->
@@ -502,33 +502,33 @@ class VideoDetailFragment :
             }
         )
         binding!!.detailControlsPlaylistAppend.setOnClickListener(
-            makeOnClickListener(
-                Consumer { info: StreamInfo ->
-                    if (getFM() != null && currentInfo != null) {
-                        val fragment = getParentFragmentManager().findFragmentById(R.id.fragment_holder)
+            makeOnClickListener
+            { info: StreamInfo ->
+                if (getFM() != null && currentInfo != null) {
+                    val fragment = getParentFragmentManager().findFragmentById(R.id.fragment_holder)
 
-                        // commit previous pending changes to database
-                        if (fragment is LocalPlaylistFragment) {
-                            fragment.saveImmediate()
-                        } else if (fragment is MainFragment) {
-                            fragment.commitPlaylistTabs()
-                        }
-
-                        disposables.add(
-                            PlaylistDialog.createCorrespondingDialog(
-                                requireContext(),
-                                List.of<StreamEntity?>(StreamEntity(info)),
-                                Consumer { dialog: PlaylistDialog? ->
-                                    dialog!!.show(
-                                        getParentFragmentManager(),
-                                        TAG
-                                    )
-                                }
-                            )
-                        )
+                    // commit previous pending changes to database
+                    if (fragment is LocalPlaylistFragment) {
+                        fragment.saveImmediate()
+                    } else if (fragment is MainFragment) {
+                        fragment.commitPlaylistTabs()
                     }
+
+                    disposables.add(
+                        PlaylistDialog.createCorrespondingDialog(
+                            requireContext(),
+                            List.of<StreamEntity?>(StreamEntity(info)),
+                            Consumer { dialog: PlaylistDialog? ->
+                                dialog!!.show(
+                                    getParentFragmentManager(),
+                                    TAG
+                                )
+                            }
+                        )
+                    )
                 }
-            )
+            }
+
         )
         binding!!.detailControlsDownload.setOnClickListener(
             View.OnClickListener { v: View? ->
@@ -542,34 +542,34 @@ class VideoDetailFragment :
             }
         )
         binding!!.detailControlsShare.setOnClickListener(
-            makeOnClickListener(
-                Consumer { info: StreamInfo ->
-                    ShareUtils.shareText(
-                        requireContext(), info.name, info.url,
-                        info.thumbnails
-                    )
-                }
-            )
+            makeOnClickListener
+            { info: StreamInfo ->
+                ShareUtils.shareText(
+                    requireContext(), info.name, info.url,
+                    info.thumbnails
+                )
+            }
+
         )
         binding!!.detailControlsOpenInBrowser.setOnClickListener(
-            makeOnClickListener(
-                Consumer { info: StreamInfo ->
-                    ShareUtils.openUrlInBrowser(
-                        requireContext(),
-                        info.url
-                    )
-                }
-            )
+            makeOnClickListener
+            { info: StreamInfo ->
+                ShareUtils.openUrlInBrowser(
+                    requireContext(),
+                    info.url
+                )
+            }
+
         )
         binding!!.detailControlsPlayWithKodi.setOnClickListener(
-            makeOnClickListener(
-                Consumer { info: StreamInfo ->
-                    KoreUtils.playWithKore(
-                        requireContext(),
-                        Uri.parse(info.url)
-                    )
-                }
-            )
+            makeOnClickListener
+            { info: StreamInfo ->
+                KoreUtils.playWithKore(
+                    requireContext(),
+                    Uri.parse(info.url)
+                )
+            }
+
         )
         if (DEBUG) {
             binding!!.detailControlsCrashThePlayer.setOnClickListener(
@@ -619,85 +619,79 @@ class VideoDetailFragment :
         )
     }
 
-    private fun makeOnClickListener(consumer: Consumer<StreamInfo>): View.OnClickListener {
+    private fun makeOnClickListener(block: (StreamInfo) -> Unit): View.OnClickListener {
         return View.OnClickListener { v: View? ->
             val ci = currentInfo
             if (!isLoading.get() && ci != null) {
-                consumer.accept(ci)
+                block(ci)
             }
         }
     }
 
     private fun setOnLongClickListeners() {
         binding!!.detailTitleRootLayout.setOnLongClickListener(
-            makeOnLongClickListener(
-                Consumer { info: StreamInfo ->
-                    ShareUtils.copyToClipboard(
-                        requireContext(),
-                        binding!!.detailVideoTitleView.getText().toString()
-                    )
-                }
-            )
+            makeOnLongClickListener { info: StreamInfo ->
+                ShareUtils.copyToClipboard(
+                    requireContext(),
+                    binding!!.detailVideoTitleView.getText().toString()
+                )
+            }
+
         )
         binding!!.detailUploaderRootLayout.setOnLongClickListener(
-            makeOnLongClickListener(
-                Consumer { info: StreamInfo ->
-                    if (TextUtils.isEmpty(info.subChannelUrl)) {
-                        Log.w(TAG, "Can't open parent channel because we got no parent channel URL")
-                    } else {
-                        openChannel(info.uploaderUrl, info.uploaderName)
-                    }
+            makeOnLongClickListener { info: StreamInfo ->
+                if (TextUtils.isEmpty(info.subChannelUrl)) {
+                    Log.w(TAG, "Can't open parent channel because we got no parent channel URL")
+                } else {
+                    openChannel(info.uploaderUrl, info.uploaderName)
                 }
-            )
+            }
+
         )
 
         binding!!.detailControlsBackground.setOnLongClickListener(
-            makeOnLongClickListener(
-                Consumer { info: StreamInfo ->
-                    openBackgroundPlayer(
-                        true
-                    )
-                }
-            )
-        )
-        binding!!.detailControlsPopup.setOnLongClickListener(
-            makeOnLongClickListener(
-                Consumer { info: StreamInfo ->
-                    openPopupPlayer(
-                        true
-                    )
-                }
-            )
-        )
-        binding!!.detailControlsDownload.setOnLongClickListener(
-            makeOnLongClickListener(
-                Consumer { info: StreamInfo ->
-                    NavigationHelper.openDownloads(
-                        activity
-                    )
-                }
-            )
-        )
-
-        val overlayListener = makeOnLongClickListener(
-            Consumer { info: StreamInfo ->
-                openChannel(
-                    info.uploaderUrl,
-                    info.uploaderName
+            makeOnLongClickListener { info: StreamInfo ->
+                openBackgroundPlayer(
+                    true
                 )
             }
+
         )
+        binding!!.detailControlsPopup.setOnLongClickListener(
+            makeOnLongClickListener { info: StreamInfo ->
+                openPopupPlayer(
+                    true
+                )
+            }
+
+        )
+        binding!!.detailControlsDownload.setOnLongClickListener(
+            makeOnLongClickListener { info: StreamInfo ->
+                NavigationHelper.openDownloads(
+                    activity
+                )
+            }
+
+        )
+
+        val overlayListener = makeOnLongClickListener { info: StreamInfo ->
+            openChannel(
+                info.uploaderUrl,
+                info.uploaderName
+            )
+        }
+
         binding!!.overlayThumbnail.setOnLongClickListener(overlayListener)
         binding!!.overlayMetadataLayout.setOnLongClickListener(overlayListener)
     }
 
-    private fun makeOnLongClickListener(consumer: Consumer<StreamInfo>): OnLongClickListener {
+    private fun makeOnLongClickListener(block: (StreamInfo) -> Unit): OnLongClickListener {
         return OnLongClickListener { v: View? ->
             val ci = currentInfo
             if (isLoading.get() || ci == null) {
                 return@OnLongClickListener false
             }
-            consumer.accept(ci)
+            block(ci)
             true
         }
     }
