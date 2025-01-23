@@ -793,7 +793,7 @@ class VideoDetailFragment :
 
         setupBottomPlayer()
         if (PlayerHolder.isNotBoundYet()) {
-            setHeightThumbnail()
+            setPlayerAndThumbnailHeight()
         } else {
             PlayerHolder.startService(false, this, this)
         }
@@ -1394,7 +1394,7 @@ class VideoDetailFragment :
             if (view != null) {
                 // Setup the surface view height, so that it fits the video correctly; this is done also
                 // here, and not only in the Handler, to avoid a choppy fullscreen rotation animation.
-                setHeightThumbnail()
+                setPlayerAndThumbnailHeight()
             }
         }
 
@@ -1407,7 +1407,7 @@ class VideoDetailFragment :
                 }
                 ifPlayer {
                     // setup the surface view height, so that it fits the video correctly
-                    setHeightThumbnail()
+                    setPlayerAndThumbnailHeight()
                     player.UIs().get(MainPlayerUi::class.java)?.let { playerUi: MainPlayerUi ->
                         // prevent from re-adding a view multiple times
                         playerUi.removeViewFromParent()
@@ -1447,7 +1447,7 @@ class VideoDetailFragment :
                         else
                             activity.window.decorView
                         ).height
-                    setHeightThumbnail(height, metrics)
+                    setPlayerAndThumbnailHeight(height, metrics)
                     requireView().getViewTreeObserver().removeOnPreDrawListener(preDrawListener)
                 }
                 return false
@@ -1461,7 +1461,7 @@ class VideoDetailFragment :
      * and about videos with aspectRatio ZOOM (the height for them will be a bit higher,
      * [.MAX_PLAYER_HEIGHT])
      */
-    private fun setHeightThumbnail() {
+    private fun setPlayerAndThumbnailHeight() {
         val metrics = resources.displayMetrics
         val isPortrait = metrics.heightPixels > metrics.widthPixels
         requireView().getViewTreeObserver().removeOnPreDrawListener(preDrawListener)
@@ -1475,7 +1475,7 @@ class VideoDetailFragment :
                 ).height
             // Height is zero when the view is not yet displayed like after orientation change
             if (height != 0) {
-                setHeightThumbnail(height, metrics)
+                setPlayerAndThumbnailHeight(height, metrics)
             } else {
                 requireView().getViewTreeObserver().addOnPreDrawListener(preDrawListener)
             }
@@ -1486,11 +1486,11 @@ class VideoDetailFragment :
                 else
                     metrics.heightPixels / 2.0f
                 ).toInt()
-            setHeightThumbnail(height, metrics)
+            setPlayerAndThumbnailHeight(height, metrics)
         }
     }
 
-    private fun setHeightThumbnail(newHeight: Int, metrics: DisplayMetrics) {
+    private fun setPlayerAndThumbnailHeight(newHeight: Int, metrics: DisplayMetrics) {
         binding.detailThumbnailImageView.setLayoutParams(
             FrameLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT, newHeight
