@@ -42,6 +42,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
@@ -59,6 +60,7 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.functions.Action
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.schabi.newpipe.App
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.stream.model.StreamEntity
@@ -93,7 +95,6 @@ import org.schabi.newpipe.ktx.animateRotation
 import org.schabi.newpipe.local.dialog.PlaylistDialog
 import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
-import org.schabi.newpipe.player.Player
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.event.OnKeyDownListener
@@ -130,7 +131,6 @@ import java.util.List
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -213,6 +213,9 @@ class VideoDetailFragment :
     private var settingsContentObserver: ContentObserver? = null
 
     private var playerService: VideoDetailFragmentPlayer? = null
+
+    private val videoDetailFragmentThumbnailStreamInfo = MutableStateFlow<VideoStreamInfo?>(null)
+    private val videoDetailFragmentThumbnailStreamProgress = MutableStateFlow<VideoStreamProgress?>(null)
 
     /** Ensure the player is set, and pass the [VideoDetailFragmentPlayer] to the block. */
     private fun ifPlayer(block: VideoDetailFragmentPlayer.() -> Unit) {
@@ -347,6 +350,15 @@ class VideoDetailFragment :
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentVideoDetailBinding.inflate(inflater, container, false)
+        binding.thumbnailComposeView!!.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                VideoDetailFragmentThumbnail(
+                    streamProgress = videoDetailFragmentThumbnailStreamProgress,
+                    streamInfo = videoDetailFragmentThumbnailStreamInfo
+                )
+            }
+        }
         return binding.getRoot()
     }
 
@@ -1618,10 +1630,8 @@ class VideoDetailFragment :
             binding.detailContentRootHiding.visibility = View.INVISIBLE
         }
 
-        binding.detailThumbnailPlayButton.animate(false, 50)
-        binding.detailDurationView.animate(false, 100)
-        binding.detailPositionView.visibility = View.GONE
-        binding.positionView.visibility = View.GONE
+        videoDetailFragmentThumbnailStreamInfo.value = null
+        videoDetailFragmentThumbnailStreamProgress.value = null
 
         binding.detailVideoTitleView.text = title
         binding.detailVideoTitleView.setMaxLines(1)
@@ -1657,7 +1667,6 @@ class VideoDetailFragment :
 
         updateTabs(info)
 
-        binding.detailThumbnailPlayButton.animate(true, 200)
         binding.detailVideoTitleView.text = title
 
         binding.detailSubChannelThumbnailView.setVisibility(View.GONE)
@@ -1718,20 +1727,23 @@ class VideoDetailFragment :
             binding.detailThumbsDisabledView.visibility = View.GONE
         }
 
+        val noVideoStreams =
+            info.videoStreams.isEmpty() && info.videoOnlyStreams.isEmpty()
+        val streamType = if (noVideoStreams) { VideoStreamType.Audio } else { VideoStreamType.Video }
         if (info.duration > 0) {
-            binding.detailDurationView.text = Localization.getDurationString(info.duration)
-            binding.detailDurationView.setBackgroundColor(
-                ContextCompat.getColor(activity, R.color.duration_background_color)
+            videoDetailFragmentThumbnailStreamInfo.value = VideoStreamInfo(
+                streamType = streamType,
+                streamDuration = StreamDuration.Stream(
+                    duration = Localization.getDurationString(info.duration)
+                )
             )
-            binding.detailDurationView.animate(true, 100)
         } else if (info.streamType == StreamType.LIVE_STREAM) {
-            binding.detailDurationView.setText(R.string.duration_live)
-            binding.detailDurationView.setBackgroundColor(
-                ContextCompat.getColor(activity, R.color.live_duration_background_color)
+            videoDetailFragmentThumbnailStreamInfo.value = VideoStreamInfo(
+                streamType = streamType,
+                streamDuration = StreamDuration.LiveStream
             )
-            binding.detailDurationView.animate(true, 100)
         } else {
-            binding.detailDurationView.visibility = View.GONE
+            videoDetailFragmentThumbnailStreamInfo.value = null
         }
 
         binding.detailTitleRootLayout.isClickable = true
@@ -1780,12 +1792,7 @@ class VideoDetailFragment :
         else
             View.VISIBLE
 
-        val noVideoStreams =
-            info.videoStreams.isEmpty() && info.videoOnlyStreams.isEmpty()
         binding.detailControlsPopup.visibility = if (noVideoStreams) View.GONE else View.VISIBLE
-        binding.detailThumbnailPlayButton.setImageResource(
-            if (noVideoStreams) R.drawable.ic_headset_shadow else R.drawable.ic_play_arrow_shadow
-        )
     }
 
     private fun displayUploaderAsSubChannel(info: StreamInfo) {
@@ -1875,8 +1882,7 @@ class VideoDetailFragment :
             positionSubscriber!!.dispose()
         }
         if (!DependentPreferenceHelper.getResumePlaybackEnabled(activity)) {
-            binding.positionView.visibility = View.GONE
-            binding.detailPositionView.visibility = View.GONE
+            videoDetailFragmentThumbnailStreamProgress.value = null
             return
         }
         val recordManager = HistoryRecordManager(requireContext())
@@ -1892,8 +1898,7 @@ class VideoDetailFragment :
                 },
                 io.reactivex.rxjava3.functions.Consumer { e: Throwable? -> },
                 Action {
-                    binding.positionView.visibility = View.GONE
-                    binding.detailPositionView.visibility = View.GONE
+                    videoDetailFragmentThumbnailStreamProgress.value = null
                 }
             )
     }
@@ -1904,26 +1909,12 @@ class VideoDetailFragment :
         }
         val progressSeconds = TimeUnit.MILLISECONDS.toSeconds(progress).toInt()
         val durationSeconds = TimeUnit.MILLISECONDS.toSeconds(duration).toInt()
-        // If the old and the new progress values have a big difference then use animation.
-        // Otherwise don't because it affects CPU
-        val progressDifference: Int = abs(
-            binding.positionView.progress -
-                progressSeconds
-        )
-        binding.positionView.setMax(durationSeconds)
-        if (progressDifference > 2) {
-            binding.positionView.setProgressAnimated(progressSeconds)
-        } else {
-            binding.positionView.progress = progressSeconds
-        }
-        val position = Localization.getDurationString(progressSeconds.toLong())
-        if (position !== binding.detailPositionView.getText()) {
-            binding.detailPositionView.text = position
-        }
-        if (binding.positionView.visibility != View.VISIBLE) {
-            binding.positionView.animate(true, 100)
-            binding.detailPositionView.animate(true, 100)
-        }
+
+        videoDetailFragmentThumbnailStreamProgress.value =
+            VideoStreamProgress(
+                percentage = progressSeconds.toFloat() / durationSeconds.toFloat(),
+                currentTime = Localization.getDurationString(progressSeconds.toLong())
+            )
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -1989,19 +1980,6 @@ class VideoDetailFragment :
         parameters: PlaybackParameters?
     ) {
         setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
-
-        if (state == Player.STATE_PLAYING) {
-            ifPlayer {
-                if (binding.positionView.alpha != 1.0f &&
-                    player.playQueue != null &&
-                    player.playQueue!!.item != null &&
-                    player.playQueue!!.item!!.url == url
-                ) {
-                    binding.positionView.animate(true, 100)
-                    binding.detailPositionView.animate(true, 100)
-                }
-            }
-        }
     }
 
     override fun onProgressUpdate(

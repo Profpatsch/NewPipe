@@ -49,17 +49,6 @@
                         tools:layout_height="200dp"
                         tools:src="@drawable/placeholder_thumbnail_video" />
 
-                    <ImageView
-                        android:id="@+id/detail_thumbnail_play_button"
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        android:layout_gravity="center"
-                        android:background="@android:color/transparent"
-                        android:src="@drawable/ic_play_arrow_shadow"
-                        android:visibility="invisible"
-                        tools:ignore="ContentDescription"
-                        tools:visibility="visible" />
-
                     <org.schabi.newpipe.views.NewPipeTextView
                         android:id="@+id/touch_append_detail"
                         android:layout_width="wrap_content"
@@ -77,68 +66,12 @@
                         android:visibility="gone"
                         tools:ignore="RtlHardcoded"
                         tools:visibility="visible" />
-
-                    <org.schabi.newpipe.views.NewPipeTextView
-                        android:id="@+id/detail_duration_view"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="bottom|right"
-                        android:layout_marginLeft="12dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginRight="12dp"
-                        android:layout_marginBottom="8dp"
-                        android:alpha=".6"
-                        android:background="#23000000"
-                        android:gravity="center"
-                        android:paddingLeft="6dp"
-                        android:paddingTop="2dp"
-                        android:paddingRight="6dp"
-                        android:paddingBottom="2dp"
-                        android:textAllCaps="true"
-                        android:textColor="@android:color/white"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        tools:ignore="RtlHardcoded"
-                        tools:text="12:38"
-                        tools:visibility="visible" />
-
-                    <org.schabi.newpipe.views.NewPipeTextView
-                        android:id="@+id/detail_position_view"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="bottom|left"
-                        android:layout_marginLeft="12dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginRight="12dp"
-                        android:layout_marginBottom="8dp"
-                        android:alpha=".6"
-                        android:background="?colorPrimary"
-                        android:gravity="center"
-                        android:paddingLeft="6dp"
-                        android:paddingTop="2dp"
-                        android:paddingRight="6dp"
-                        android:paddingBottom="2dp"
-                        android:textAllCaps="true"
-                        android:textColor="@android:color/white"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        tools:ignore="RtlHardcoded"
-                        tools:text="12:38"
-                        tools:visibility="visible" />
-
-                    <org.schabi.newpipe.views.AnimatedProgressBar
-                        android:id="@+id/position_view"
-                        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    
+                    <androidx.compose.ui.platform.ComposeView
+                        android:id="@+id/thumbnail_compose_view"
                         android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:layout_gravity="bottom"
-                        android:progressDrawable="?attr/progress_horizontal_drawable"
-                        android:visibility="invisible"
-                        tools:max="100"
-                        tools:progress="40"
-                        tools:visibility="visible" />
+                        android:layout_height="match_parent"
+                        />
 
                     <!-- Player will be inserted here in realtime -->
                     <FrameLayout
