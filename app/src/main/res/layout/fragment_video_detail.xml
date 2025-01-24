@@ -48,24 +48,6 @@
                         tools:ignore="RtlHardcoded"
                         tools:layout_height="200dp"
                         tools:src="@drawable/placeholder_thumbnail_video" />
-
-                    <org.schabi.newpipe.views.NewPipeTextView
-                        android:id="@+id/touch_append_detail"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:background="#64000000"
-                        android:paddingLeft="30dp"
-                        android:paddingTop="10dp"
-                        android:paddingRight="30dp"
-                        android:paddingBottom="10dp"
-                        android:text="@string/hold_to_append"
-                        android:textColor="@android:color/white"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        tools:ignore="RtlHardcoded"
-                        tools:visibility="visible" />
                     
                     <androidx.compose.ui.platform.ComposeView
                         android:id="@+id/thumbnail_compose_view"

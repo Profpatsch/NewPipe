@@ -1,5 +1,6 @@
 package org.schabi.newpipe.fragments.detail
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,17 +16,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.transformLatest
 import org.schabi.newpipe.R
+import kotlin.time.Duration.Companion.seconds
 
 data class VideoStreamProgress(
     val currentTime: String,
@@ -44,16 +54,45 @@ sealed class StreamDuration {
     data class Stream(val duration: String) : StreamDuration()
 }
 
+data class TriggerHoldToXIndicator(
+    val messageText: String
+)
+
+@OptIn(ExperimentalCoroutinesApi::class)
 @Composable
 fun VideoDetailFragmentThumbnail(
     modifier: Modifier = Modifier,
     streamProgress: StateFlow<VideoStreamProgress?>,
-    streamInfo: StateFlow<VideoStreamInfo?>
+    streamInfo: StateFlow<VideoStreamInfo?>,
+    triggerHoldToXIndicator: Flow<TriggerHoldToXIndicator>
 ) {
     val progress by streamProgress.collectAsStateWithLifecycle()
     val info by streamInfo.collectAsStateWithLifecycle()
+
+    class HoldToX(
+        val alpha: Float,
+        val lastVal: TriggerHoldToXIndicator
+    )
+
+    // We want to display the “Hold To” message for one second and then fade out.
+    val holdToX by remember {
+        triggerHoldToXIndicator.transformLatest { t ->
+            emit(HoldToX(1f, t))
+            delay(1.seconds)
+            emit(HoldToX(0f, t))
+        }
+    }.collectAsStateWithLifecycle(HoldToX(0f, TriggerHoldToXIndicator("")))
+
+    val holdToXAlpha by animateFloatAsState(
+        holdToX.alpha,
+        label = "HoldToXAlpha"
+    )
+
     Column(modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
+
+            // Centered on the thumbnail
+            // play indicator (either audio or video)
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -74,6 +113,24 @@ fun VideoDetailFragmentThumbnail(
                     }
                 }
             }
+
+            // “hold to enqueue/append” indicator triggered to indicate long-press actions for buttons
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+            ) {
+                Text(
+                    text = holdToX.lastVal.messageText,
+                    color = Color.White,
+                    modifier = Modifier
+                        .alpha(holdToXAlpha)
+                        .background(colorResource(R.color.video_overlay_color))
+                        .padding(vertical = 10.dp, horizontal = 30.dp)
+
+                )
+            }
+
+            // Progress section in the bottom of thumbnail
             progress?.let {
                 Text(
                     modifier = Modifier
@@ -100,6 +157,8 @@ fun VideoDetailFragmentThumbnail(
                 )
             }
         }
+
+        // progress indicator right below thumbnail
         progress?.let {
             LinearProgressIndicator(
                 progress = { it.percentage },
@@ -127,7 +186,8 @@ fun VideoDetailFragmentThumbnailPreview() {
                     streamType = VideoStreamType.Video,
                     streamDuration = StreamDuration.Stream("10:41")
                 )
-            )
+            ),
+            triggerHoldToXIndicator = emptyFlow()
         )
     }
 }

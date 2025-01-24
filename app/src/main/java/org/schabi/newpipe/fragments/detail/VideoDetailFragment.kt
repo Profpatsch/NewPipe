@@ -60,6 +60,8 @@ import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.functions.Action
 import io.reactivex.rxjava3.schedulers.Schedulers
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.schabi.newpipe.App
 import org.schabi.newpipe.R
@@ -216,6 +218,11 @@ class VideoDetailFragment :
 
     private val videoDetailFragmentThumbnailStreamInfo = MutableStateFlow<VideoStreamInfo?>(null)
     private val videoDetailFragmentThumbnailStreamProgress = MutableStateFlow<VideoStreamProgress?>(null)
+    private val videoDetailFragmentHoldToXIndicator =
+        MutableSharedFlow<TriggerHoldToXIndicator>(
+            replay = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
 
     /** Ensure the player is set, and pass the [VideoDetailFragmentPlayer] to the block. */
     private fun ifPlayer(block: VideoDetailFragmentPlayer.() -> Unit) {
@@ -355,7 +362,8 @@ class VideoDetailFragment :
             setContent {
                 VideoDetailFragmentThumbnail(
                     streamProgress = videoDetailFragmentThumbnailStreamProgress,
-                    streamInfo = videoDetailFragmentThumbnailStreamInfo
+                    streamInfo = videoDetailFragmentThumbnailStreamInfo,
+                    triggerHoldToXIndicator = videoDetailFragmentHoldToXIndicator
                 )
             }
         }
@@ -772,19 +780,10 @@ class VideoDetailFragment :
             if (motionEvent!!.action == MotionEvent.ACTION_DOWN &&
                 PlayButtonHelper.shouldShowHoldToAppendTip(activity)
             ) {
-                binding.touchAppendDetail.animate(
-                    true,
-                    250,
-                    AnimationType.ALPHA,
-                    0,
-                    Runnable {
-                        binding.touchAppendDetail.animate(
-                            false,
-                            1500,
-                            AnimationType.ALPHA,
-                            1000
-                        )
-                    }
+                videoDetailFragmentHoldToXIndicator.tryEmit(
+                    TriggerHoldToXIndicator(
+                        messageText = getString(R.string.hold_to_append)
+                    )
                 )
             }
             false
