@@ -605,23 +605,23 @@ class VideoDetailFragment :
             bottomSheetBehavior!!
                 .setState(BottomSheetBehavior.STATE_EXPANDED)
         }
-        binding.overlayThumbnail.setOnClickListener(overlayListener)
-        binding.overlayMetadataLayout.setOnClickListener(overlayListener)
-        binding.overlayButtonsLayout.setOnClickListener(overlayListener)
-        binding.overlayCloseButton.setOnClickListener(
+        binding.videoOverlay.overlayThumbnail.setOnClickListener(overlayListener)
+        binding.videoOverlay.overlayMetadataLayout.setOnClickListener(overlayListener)
+        binding.videoOverlay.overlayButtonsLayout.setOnClickListener(overlayListener)
+        binding.videoOverlay.overlayCloseButton.setOnClickListener(
             View.OnClickListener { v: View? ->
                 bottomSheetBehavior!!
                     .setState(BottomSheetBehavior.STATE_HIDDEN)
             }
         )
-        binding.overlayPlayQueueButton.setOnClickListener(
+        binding.videoOverlay.overlayPlayQueueButton.setOnClickListener(
             View.OnClickListener { v: View? ->
                 NavigationHelper.openPlayQueue(
                     requireContext()
                 )
             }
         )
-        binding.overlayPlayPauseButton.setOnClickListener(
+        binding.videoOverlay.overlayPlayPauseButton.setOnClickListener(
             View.OnClickListener { v: View? ->
                 ifPlayer {
                     if (player.isStopped) {
@@ -700,8 +700,8 @@ class VideoDetailFragment :
             )
         }
 
-        binding.overlayThumbnail.setOnLongClickListener(overlayListener)
-        binding.overlayMetadataLayout.setOnLongClickListener(overlayListener)
+        binding.videoOverlay.overlayThumbnail.setOnLongClickListener(overlayListener)
+        binding.videoOverlay.overlayMetadataLayout.setOnLongClickListener(overlayListener)
     }
 
     private fun makeOnLongClickListener(block: (StreamInfo) -> Unit): OnLongClickListener {
@@ -1651,7 +1651,7 @@ class VideoDetailFragment :
 
         dispose(binding.detailThumbnailImageView)
         dispose(binding.detailSubChannelThumbnailView)
-        dispose(binding.overlayThumbnail)
+        dispose(binding.videoOverlay.overlayThumbnail)
         dispose(binding.detailUploaderThumbnailView)
 
         binding.detailThumbnailImageView.setImageBitmap(null)
@@ -2059,7 +2059,7 @@ class VideoDetailFragment :
 
             if (fullscreen) {
                 hideSystemUiIfNeeded()
-                binding.overlayPlayPauseButton.requestFocus()
+                binding.videoOverlay.overlayPlayPauseButton.requestFocus()
             } else {
                 showSystemUi()
             }
@@ -2532,9 +2532,9 @@ class VideoDetailFragment :
             manageSpaceAtTheBottom(false)
             bottomSheetBehavior!!.peekHeight = peekHeight
             if (bottomSheetState == BottomSheetBehavior.STATE_COLLAPSED) {
-                binding.overlayLayout.setAlpha(MAX_OVERLAY_ALPHA)
+                binding.videoOverlay.overlayLayout.setAlpha(MAX_OVERLAY_ALPHA)
             } else if (bottomSheetState == BottomSheetBehavior.STATE_EXPANDED) {
-                binding.overlayLayout.setAlpha(0f)
+                binding.videoOverlay.overlayLayout.setAlpha(0f)
                 setOverlayElementsClickable(false)
             }
         }
@@ -2631,7 +2631,7 @@ class VideoDetailFragment :
                 queue == null || queue.isEmpty
             }
         // binding is null when rotating the device...
-        binding.overlayPlayQueueButton.setVisibility(
+        binding.videoOverlay.overlayPlayQueueButton.setVisibility(
             if (isPlayQueueEmpty) View.GONE else View.VISIBLE
         )
     }
@@ -2641,10 +2641,10 @@ class VideoDetailFragment :
         uploader: String?,
         thumbnails: MutableList<Image>
     ) {
-        binding.overlayTitleTextView.text = if (TextUtils.isEmpty(overlayTitle)) "" else overlayTitle
-        binding.overlayChannelTextView.text = if (TextUtils.isEmpty(uploader)) "" else uploader
-        binding.overlayThumbnail.setImageDrawable(null)
-        loadDetailsThumbnail(binding.overlayThumbnail, thumbnails)
+        binding.videoOverlay.overlayTitleTextView.text = if (TextUtils.isEmpty(overlayTitle)) "" else overlayTitle
+        binding.videoOverlay.overlayChannelTextView.text = if (TextUtils.isEmpty(uploader)) "" else uploader
+        binding.videoOverlay.overlayThumbnail.setImageDrawable(null)
+        loadDetailsThumbnail(binding.videoOverlay.overlayThumbnail, thumbnails)
     }
 
     private fun setOverlayPlayPauseImage(playerIsPlaying: Boolean) {
@@ -2652,7 +2652,7 @@ class VideoDetailFragment :
             R.drawable.ic_pause
         else
             R.drawable.ic_play_arrow
-        binding.overlayPlayPauseButton.setImageResource(drawable)
+        binding.videoOverlay.overlayPlayPauseButton.setImageResource(drawable)
     }
 
     private fun setOverlayLook(
@@ -2665,7 +2665,7 @@ class VideoDetailFragment :
         if (behavior == null || slideOffset < 0) {
             return
         }
-        binding.overlayLayout.setAlpha(
+        binding.videoOverlay.overlayLayout.setAlpha(
             min(
                 MAX_OVERLAY_ALPHA,
                 1 - slideOffset
@@ -2679,14 +2679,14 @@ class VideoDetailFragment :
     }
 
     private fun setOverlayElementsClickable(enable: Boolean) {
-        binding.overlayThumbnail.isClickable = enable
-        binding.overlayThumbnail.isLongClickable = enable
-        binding.overlayMetadataLayout.isClickable = enable
-        binding.overlayMetadataLayout.isLongClickable = enable
-        binding.overlayButtonsLayout.isClickable = enable
-        binding.overlayPlayQueueButton.isClickable = enable
-        binding.overlayPlayPauseButton.isClickable = enable
-        binding.overlayCloseButton.isClickable = enable
+        binding.videoOverlay.overlayThumbnail.isClickable = enable
+        binding.videoOverlay.overlayThumbnail.isLongClickable = enable
+        binding.videoOverlay.overlayMetadataLayout.isClickable = enable
+        binding.videoOverlay.overlayMetadataLayout.isLongClickable = enable
+        binding.videoOverlay.overlayButtonsLayout.isClickable = enable
+        binding.videoOverlay.overlayPlayQueueButton.isClickable = enable
+        binding.videoOverlay.overlayPlayPauseButton.isClickable = enable
+        binding.videoOverlay.overlayCloseButton.isClickable = enable
     }
 
     private fun updateBottomSheetState(newState: Int) {
