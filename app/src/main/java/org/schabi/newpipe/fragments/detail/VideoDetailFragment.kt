@@ -1624,7 +1624,8 @@ class VideoDetailFragment :
 
         dispose(binding.detailThumbnailImageView)
         dispose(binding.detailSubChannelThumbnailView)
-        dispose(binding.videoOverlay.overlayThumbnail)
+        overlay.disposeThumbnail()
+
         dispose(binding.detailUploaderThumbnailView)
 
         binding.detailThumbnailImageView.setImageBitmap(null)
@@ -2032,7 +2033,7 @@ class VideoDetailFragment :
 
             if (fullscreen) {
                 hideSystemUiIfNeeded()
-                binding.videoOverlay.overlayPlayPauseButton.requestFocus()
+                overlay.requestPlayPauseButtonFocus()
             } else {
                 showSystemUi()
             }
@@ -2609,10 +2610,7 @@ class VideoDetailFragment :
                 val queue = player.playQueue
                 queue == null || queue.isEmpty
             }
-        // binding is null when rotating the device...
-        binding.videoOverlay.overlayPlayQueueButton.setVisibility(
-            if (isPlayQueueEmpty) View.GONE else View.VISIBLE
-        )
+        overlay.showPlayQueueButton(!isPlayQueueEmpty)
     }
 
     private fun updateBottomSheetState(newState: Int) {

@@ -2,6 +2,7 @@ package org.schabi.newpipe.fragments.detail
 
 import android.text.TextUtils
 import android.view.View
+import coil3.util.CoilUtils.dispose
 import com.google.android.material.appbar.AppBarLayout
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.FragmentVideoOverlayBinding
@@ -52,6 +53,18 @@ class VideoDetailBottomSheetOverlay(val binding: FragmentVideoOverlayBinding) {
         binding.overlayPlayQueueButton.isClickable = enable
         binding.overlayPlayPauseButton.isClickable = enable
         binding.overlayCloseButton.isClickable = enable
+    }
+
+    fun showPlayQueueButton(show: Boolean) {
+        binding.overlayPlayQueueButton.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+    fun requestPlayPauseButtonFocus() {
+        binding.overlayPlayPauseButton.requestFocus()
+    }
+
+    fun disposeThumbnail() {
+        dispose(binding.overlayThumbnail)
     }
 
     fun updateOverlayData(
