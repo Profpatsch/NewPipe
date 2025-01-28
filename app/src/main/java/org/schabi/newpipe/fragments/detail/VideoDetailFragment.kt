@@ -134,7 +134,6 @@ import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import kotlin.math.max
-import kotlin.math.min
 
 class VideoDetailFragment :
 
@@ -209,6 +208,7 @@ class VideoDetailFragment :
     // Views
     ////////////////////////////////////////////////////////////////////////// */
     private lateinit var binding: FragmentVideoDetailBinding
+    private lateinit var overlay: VideoDetailBottomSheetOverlay
 
     private var pageAdapter: TabAdapter? = null
 
@@ -357,6 +357,7 @@ class VideoDetailFragment :
         savedInstanceState: Bundle?
     ): View {
         binding = FragmentVideoDetailBinding.inflate(inflater, container, false)
+        overlay = VideoDetailBottomSheetOverlay(binding.videoOverlay)
         binding.thumbnailComposeView!!.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
@@ -601,40 +602,33 @@ class VideoDetailFragment :
             )
         }
 
-        val overlayListener = View.OnClickListener { v: View? ->
-            bottomSheetBehavior!!
-                .setState(BottomSheetBehavior.STATE_EXPANDED)
-        }
-        binding.videoOverlay.overlayThumbnail.setOnClickListener(overlayListener)
-        binding.videoOverlay.overlayMetadataLayout.setOnClickListener(overlayListener)
-        binding.videoOverlay.overlayButtonsLayout.setOnClickListener(overlayListener)
-        binding.videoOverlay.overlayCloseButton.setOnClickListener(
-            View.OnClickListener { v: View? ->
-                bottomSheetBehavior!!
-                    .setState(BottomSheetBehavior.STATE_HIDDEN)
-            }
-        )
-        binding.videoOverlay.overlayPlayQueueButton.setOnClickListener(
-            View.OnClickListener { v: View? ->
-                NavigationHelper.openPlayQueue(
-                    requireContext()
-                )
-            }
-        )
-        binding.videoOverlay.overlayPlayPauseButton.setOnClickListener(
-            View.OnClickListener { v: View? ->
-                ifPlayer {
-                    if (player.isStopped) {
-                        autoPlayEnabled = true // forcefully start playing
-                        openVideoPlayer(false)
-                    } else {
-                        player.playPause()
-                        player.UIs().get(VideoPlayerUi::class.java)?.hideControls(0, 0)
-                        showSystemUi()
+        overlay.setListeners(
+            OverlayListeners(
+                overlay = { bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_EXPANDED) },
+                close = { bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_HIDDEN) },
+                openPlayQueue = { NavigationHelper.openPlayQueue(requireContext()) },
+                playPause = {
+                    ifPlayer {
+                        if (player.isStopped) {
+                            autoPlayEnabled = true // forcefully start playing
+                            openVideoPlayer(false)
+                        } else {
+                            player.playPause()
+                            player.UIs().get(VideoPlayerUi::class.java)?.hideControls(0, 0)
+                            showSystemUi()
+                        }
+                    }
+                    overlay.setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
+                },
+                longClick = {
+                    makeOnLongClickListener { info: StreamInfo ->
+                        openChannel(
+                            info.uploaderUrl,
+                            info.uploaderName
+                        )
                     }
                 }
-                setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
-            }
+            )
         )
     }
 
@@ -692,16 +686,6 @@ class VideoDetailFragment :
             }
 
         )
-
-        val overlayListener = makeOnLongClickListener { info: StreamInfo ->
-            openChannel(
-                info.uploaderUrl,
-                info.uploaderName
-            )
-        }
-
-        binding.videoOverlay.overlayThumbnail.setOnLongClickListener(overlayListener)
-        binding.videoOverlay.overlayMetadataLayout.setOnLongClickListener(overlayListener)
     }
 
     private fun makeOnLongClickListener(block: (StreamInfo) -> Unit): OnLongClickListener {
@@ -877,7 +861,7 @@ class VideoDetailFragment :
         val playQueueItem = item.playQueue.item
         // Update title, url, uploader from the last item in the stack (it's current now)
         if (playQueueItem != null && ifPlayerImplies { player.isStopped }) {
-            updateOverlayData(
+            overlay.updateOverlayData(
                 playQueueItem.title,
                 playQueueItem.uploader, playQueueItem.thumbnails
             )
@@ -1761,7 +1745,7 @@ class VideoDetailFragment :
         )
 
         if (ifPlayerImplies { player.isStopped }) {
-            updateOverlayData(info.name, info.uploaderName, info.thumbnails)
+            overlay.updateOverlayData(info.name, info.uploaderName, info.thumbnails)
         }
 
         if (!info.errors.isEmpty()) {
@@ -1978,7 +1962,7 @@ class VideoDetailFragment :
         shuffled: Boolean,
         parameters: PlaybackParameters?
     ) {
-        setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
+        overlay.setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
     }
 
     override fun onProgressUpdate(
@@ -2014,7 +1998,7 @@ class VideoDetailFragment :
             return
         }
 
-        updateOverlayData(info.name, info.uploaderName, info.thumbnails)
+        overlay.updateOverlayData(info.name, info.uploaderName, info.thumbnails)
         if (currentInfo != null && info.url == currentInfo!!.url) {
             return
         }
@@ -2037,9 +2021,9 @@ class VideoDetailFragment :
     }
 
     override fun onServiceStopped() {
-        setOverlayPlayPauseImage(false)
+        overlay.setOverlayPlayPauseImage(false)
         if (currentInfo != null) {
-            updateOverlayData(
+            overlay.updateOverlayData(
                 currentInfo!!.name,
                 currentInfo!!.uploaderName,
                 currentInfo!!.thumbnails
@@ -2451,7 +2435,7 @@ class VideoDetailFragment :
         PlayerHolder.stopService()
         setInitialData(0, null, "", null)
         currentInfo = null
-        updateOverlayData(null, null, mutableListOf<Image>())
+        overlay.updateOverlayData(null, null, mutableListOf<Image>())
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -2532,10 +2516,10 @@ class VideoDetailFragment :
             manageSpaceAtTheBottom(false)
             bottomSheetBehavior!!.peekHeight = peekHeight
             if (bottomSheetState == BottomSheetBehavior.STATE_COLLAPSED) {
-                binding.videoOverlay.overlayLayout.setAlpha(MAX_OVERLAY_ALPHA)
+                overlay.setAlpha(VideoDetailBottomSheetOverlay.Companion.MAX_OVERLAY_ALPHA)
             } else if (bottomSheetState == BottomSheetBehavior.STATE_EXPANDED) {
-                binding.videoOverlay.overlayLayout.setAlpha(0f)
-                setOverlayElementsClickable(false)
+                overlay.setAlpha(0f)
+                overlay.setOverlayElementsClickable(false)
             }
         }
 
@@ -2559,7 +2543,7 @@ class VideoDetailFragment :
                         bottomSheetBehavior!!.peekHeight = peekHeight
                         // Disable click because overlay buttons located on top of buttons
                         // from the player
-                        setOverlayElementsClickable(false)
+                        overlay.setOverlayElementsClickable(false)
                         hideSystemUiIfNeeded()
                         // Conditions when the player should be expanded to fullscreen
                         ifPlayer {
@@ -2572,7 +2556,10 @@ class VideoDetailFragment :
                             }
                         }
 
-                        setOverlayLook(binding.appBarLayout, behavior, 1f)
+                        overlay.setOverlayLook(
+                            binding.appBarLayout, behavior, 1f,
+                            binding.detailThumbnailImageView.height
+                        )
                     }
 
                     BottomSheetBehavior.STATE_COLLAPSED -> {
@@ -2582,11 +2569,14 @@ class VideoDetailFragment :
                         bottomSheetBehavior!!.peekHeight = peekHeight
 
                         // Re-enable clicks
-                        setOverlayElementsClickable(true)
+                        overlay.setOverlayElementsClickable(true)
                         ifPlayer {
                             mainPlayerUi?.closeItemsList()
                         }
-                        setOverlayLook(binding.appBarLayout, behavior, 0f)
+                        overlay.setOverlayLook(
+                            binding.appBarLayout, behavior, 0f,
+                            binding.detailThumbnailImageView.height
+                        )
                     }
 
                     BottomSheetBehavior.STATE_DRAGGING, BottomSheetBehavior.STATE_SETTLING -> {
@@ -2607,7 +2597,7 @@ class VideoDetailFragment :
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                setOverlayLook(binding.appBarLayout, behavior, slideOffset)
+                overlay.setOverlayLook(binding.appBarLayout, behavior, slideOffset, binding.detailThumbnailImageView.height)
             }
         }
 
@@ -2636,59 +2626,6 @@ class VideoDetailFragment :
         )
     }
 
-    private fun updateOverlayData(
-        overlayTitle: String?,
-        uploader: String?,
-        thumbnails: MutableList<Image>
-    ) {
-        binding.videoOverlay.overlayTitleTextView.text = if (TextUtils.isEmpty(overlayTitle)) "" else overlayTitle
-        binding.videoOverlay.overlayChannelTextView.text = if (TextUtils.isEmpty(uploader)) "" else uploader
-        binding.videoOverlay.overlayThumbnail.setImageDrawable(null)
-        loadDetailsThumbnail(binding.videoOverlay.overlayThumbnail, thumbnails)
-    }
-
-    private fun setOverlayPlayPauseImage(playerIsPlaying: Boolean) {
-        val drawable = if (playerIsPlaying)
-            R.drawable.ic_pause
-        else
-            R.drawable.ic_play_arrow
-        binding.videoOverlay.overlayPlayPauseButton.setImageResource(drawable)
-    }
-
-    private fun setOverlayLook(
-        appBar: AppBarLayout,
-        behavior: AppBarLayout.Behavior?,
-        slideOffset: Float
-    ) {
-        // SlideOffset < 0 when mini player is about to close via swipe.
-        // Stop animation in this case
-        if (behavior == null || slideOffset < 0) {
-            return
-        }
-        binding.videoOverlay.overlayLayout.setAlpha(
-            min(
-                MAX_OVERLAY_ALPHA,
-                1 - slideOffset
-            )
-        )
-        // These numbers are not special. They just do a cool transition
-        behavior.setTopAndBottomOffset(
-            (-binding.detailThumbnailImageView.height * 2 * (1 - slideOffset) / 3).toInt()
-        )
-        appBar.requestLayout()
-    }
-
-    private fun setOverlayElementsClickable(enable: Boolean) {
-        binding.videoOverlay.overlayThumbnail.isClickable = enable
-        binding.videoOverlay.overlayThumbnail.isLongClickable = enable
-        binding.videoOverlay.overlayMetadataLayout.isClickable = enable
-        binding.videoOverlay.overlayMetadataLayout.isLongClickable = enable
-        binding.videoOverlay.overlayButtonsLayout.isClickable = enable
-        binding.videoOverlay.overlayPlayQueueButton.isClickable = enable
-        binding.videoOverlay.overlayPlayPauseButton.isClickable = enable
-        binding.videoOverlay.overlayCloseButton.isClickable = enable
-    }
-
     private fun updateBottomSheetState(newState: Int) {
         bottomSheetState = newState
         if (newState != BottomSheetBehavior.STATE_DRAGGING &&
@@ -2701,7 +2638,6 @@ class VideoDetailFragment :
     companion object {
         const val KEY_SWITCHING_PLAYERS: String = "switching_players"
 
-        private const val MAX_OVERLAY_ALPHA = 0.9f
         private const val MAX_PLAYER_HEIGHT = 0.7f
 
         @JvmField
