@@ -1618,6 +1618,14 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
         return binding;
     }
 
+    public boolean hasParentView() {
+        return binding.getRoot().getParent() != null;
+    }
+
+    public void setVisibilityGone() {
+        binding.getRoot().setVisibility(View.GONE);
+    }
+
     public GestureDetector getGestureDetector() {
         return gestureDetector;
     }

@@ -14,10 +14,6 @@ class VideoDetailFragmentPlayer(
     val firstVideoPlayerUi
         get() = player.UIs().get(VideoPlayerUi::class.java)
 
-    /** the root of our VideoPlayerUi, if any */
-    val firstVideoPlayerUiRoot
-        get() = firstVideoPlayerUi?.binding?.root
-
     /** the MainPlayerUi, if any */
     val mainPlayerUi
         get() = player.UIs().get(MainPlayerUi::class.java)

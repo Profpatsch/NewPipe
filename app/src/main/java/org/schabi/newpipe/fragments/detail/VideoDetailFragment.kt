@@ -1311,7 +1311,7 @@ class VideoDetailFragment :
             removeVideoPlayerView()
             if (isAutoplayEnabled()) {
                 playerService.stopForImmediateReusing()
-                firstVideoPlayerUiRoot?.visibility = View.GONE
+                firstVideoPlayerUi?.setVisibilityGone()
             } else {
                 PlayerHolder.stopService()
             }
@@ -2033,7 +2033,7 @@ class VideoDetailFragment :
         setupBrightness()
         ifPlayer {
             if (mainPlayerUi == null ||
-                firstVideoPlayerUiRoot?.parent == null
+                firstVideoPlayerUi?.hasParentView() != true
             ) {
                 return@ifPlayer
             }
