@@ -280,7 +280,8 @@ class VideoDetailFragment :
         connectedPlayerService: PlayerService,
         playAfterConnect: Boolean
     ) {
-        playerService = VideoDetailFragmentPlayer(connectedPlayerService)
+        val playerServiceL = VideoDetailFragmentPlayer(connectedPlayerService)
+        playerService = playerServiceL
 
         // It will do nothing if the player is not in fullscreen mode
         hideSystemUiIfNeeded()
@@ -289,8 +290,7 @@ class VideoDetailFragment :
             return
         }
 
-        val playerUi: MainPlayerUi? =
-            connectedPlayerService.player.UIs().get(MainPlayerUi::class.java)
+        val playerUi: MainPlayerUi? = playerServiceL.mainPlayerUi
         if (DeviceUtils.isLandscape(requireContext())) {
             // If the video is playing but orientation changed
             // let's make the video in fullscreen again
@@ -614,7 +614,7 @@ class VideoDetailFragment :
                             openVideoPlayer(false)
                         } else {
                             player.playPause()
-                            player.UIs().get(VideoPlayerUi::class.java)?.hideControls(0, 0)
+                            firstVideoPlayerUi?.hideControls(0, 0)
                             showSystemUi()
                         }
                     }
@@ -794,11 +794,8 @@ class VideoDetailFragment :
         }
     }
 
-    override fun onKeyDown(keyCode: Int): Boolean {
-        return ifPlayerAnd {
-            player.UIs().get(VideoPlayerUi::class.java)?.onKeyDown(keyCode) == true
-        }
-    }
+    override fun onKeyDown(keyCode: Int): Boolean =
+        playerService?.firstVideoPlayerUi?.onKeyDown(keyCode) == true
 
     override fun onBackPressed(): Boolean {
         if (DEBUG) {
@@ -1314,7 +1311,7 @@ class VideoDetailFragment :
             removeVideoPlayerView()
             if (isAutoplayEnabled()) {
                 playerService.stopForImmediateReusing()
-                videoPlayerUiRoot?.visibility = View.GONE
+                firstVideoPlayerUiRoot?.visibility = View.GONE
             } else {
                 PlayerHolder.stopService()
             }
@@ -1403,7 +1400,7 @@ class VideoDetailFragment :
                 ifPlayer {
                     // setup the surface view height, so that it fits the video correctly
                     setPlayerAndThumbnailHeight()
-                    player.UIs().get(MainPlayerUi::class.java)?.let { playerUi: MainPlayerUi ->
+                    mainPlayerUi?.let { playerUi: MainPlayerUi ->
                         // prevent from re-adding a view multiple times
                         playerUi.removeViewFromParent()
                         binding.playerPlaceholder.addView(playerUi.getBinding().getRoot())
@@ -1417,7 +1414,7 @@ class VideoDetailFragment :
     private fun removeVideoPlayerView() {
         makeDefaultHeightForVideoPlaceholder()
         ifPlayer {
-            videoPlayerUi?.removeViewFromParent()
+            firstVideoPlayerUi?.removeViewFromParent()
         }
     }
 
@@ -1494,7 +1491,7 @@ class VideoDetailFragment :
         binding.detailThumbnailImageView.setMinimumHeight(newHeight)
         ifPlayer {
             val maxHeight = (metrics.heightPixels * MAX_PLAYER_HEIGHT).toInt()
-            videoPlayerUi?.let { ui: VideoPlayerUi ->
+            firstVideoPlayerUi?.let { ui: VideoPlayerUi ->
                 ui.getBinding().surfaceView.setHeights(
                     newHeight,
                     if (ui.isFullscreen) newHeight else maxHeight
@@ -2036,7 +2033,7 @@ class VideoDetailFragment :
         setupBrightness()
         ifPlayer {
             if (mainPlayerUi == null ||
-                videoPlayerUiRoot?.parent == null
+                firstVideoPlayerUiRoot?.parent == null
             ) {
                 return@ifPlayer
             }
