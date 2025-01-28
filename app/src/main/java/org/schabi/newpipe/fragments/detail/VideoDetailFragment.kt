@@ -961,27 +961,23 @@ class VideoDetailFragment :
             currentWorker!!.dispose()
         }
 
-        runWorker(forceLoad, if (addToBackStack != null) addToBackStack else stack.isEmpty())
-    }
-
-    private fun runWorker(forceLoad: Boolean, addToBackStack: Boolean) {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this.activity)
         currentWorker = ExtractorHelper.getStreamInfo(serviceId, url, forceLoad)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(
-                io.reactivex.rxjava3.functions.Consumer { result: StreamInfo ->
+                io.reactivex.rxjava3.functions.Consumer<StreamInfo> { result: StreamInfo ->
                     isLoading.set(false)
                     hideMainPlayerOnLoadingNewStream()
                     if (result.ageLimit != StreamExtractor.NO_AGE_LIMIT && !prefs.getBoolean(
-                            getString(R.string.show_age_restricted_content), false
+                            this.getString(R.string.show_age_restricted_content), false
                         )
                     ) {
                         hideAgeRestrictedContent()
                     } else {
                         handleResult(result)
                         showContent()
-                        if (addToBackStack) {
+                        if (if (addToBackStack != null) addToBackStack else stack.isEmpty()) {
                             if (playQueue == null) {
                                 playQueue = SinglePlayQueue(result)
                             }
@@ -997,7 +993,7 @@ class VideoDetailFragment :
                         }
                     }
                 },
-                io.reactivex.rxjava3.functions.Consumer { throwable: Throwable? ->
+                io.reactivex.rxjava3.functions.Consumer<Throwable> { throwable: Throwable? ->
                     showError(
                         ErrorInfo(
                             throwable!!, UserAction.REQUESTED_STREAM,
