@@ -1304,7 +1304,10 @@ class VideoDetailFragment :
                 return@ifPlayer
             }
 
-            removeVideoPlayerView()
+            this@VideoDetailFragment.makeDefaultHeightForVideoPlaceholder()
+            this@VideoDetailFragment.ifPlayer {
+                firstVideoPlayerUi?.removeViewFromParent()
+            }
             if (isAutoplayEnabled()) {
                 playerService.stopForImmediateReusing()
                 firstVideoPlayerUi?.setVisibilityGone()
@@ -1405,13 +1408,6 @@ class VideoDetailFragment :
                 }
             }
         )
-    }
-
-    private fun removeVideoPlayerView() {
-        makeDefaultHeightForVideoPlaceholder()
-        ifPlayer {
-            firstVideoPlayerUi?.removeViewFromParent()
-        }
     }
 
     private fun makeDefaultHeightForVideoPlaceholder() {
