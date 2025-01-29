@@ -1233,12 +1233,10 @@ class VideoDetailFragment :
         if (append) { // resumePlayback: false
             NavigationHelper.enqueueOnPlayer(activity, queue, PlayerType.POPUP)
         } else {
-            replaceQueueIfUserConfirms(
-                Runnable {
-                    NavigationHelper
-                        .playOnPopupPlayer(activity, queue, true)
-                }
-            )
+            replaceQueueIfUserConfirms {
+                NavigationHelper
+                    .playOnPopupPlayer(activity, queue, true)
+            }
         }
     }
 
@@ -1271,23 +1269,21 @@ class VideoDetailFragment :
         ) {
             showExternalVideoPlaybackDialog()
         } else {
-            replaceQueueIfUserConfirms(
-                Runnable {
-                    playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return@Runnable }
-                    if (currentInfo == null) {
-                        return@Runnable
-                    }
-
-                    val queue = setupPlayQueueForIntent(false)
-                    tryAddVideoPlayerView()
-
-                    val playerIntent = NavigationHelper.getPlayerIntent<PlayerService?>(
-                        requireContext(),
-                        PlayerService::class.java, queue, true, autoPlayEnabled
-                    )
-                    ContextCompat.startForegroundService(activity, playerIntent)
+            replaceQueueIfUserConfirms {
+                playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return@replaceQueueIfUserConfirms }
+                if (currentInfo == null) {
+                    return@replaceQueueIfUserConfirms
                 }
-            )
+
+                val queue = setupPlayQueueForIntent(false)
+                tryAddVideoPlayerView()
+
+                val playerIntent = NavigationHelper.getPlayerIntent<PlayerService?>(
+                    requireContext(),
+                    PlayerService::class.java, queue, true, autoPlayEnabled
+                )
+                ContextCompat.startForegroundService(activity, playerIntent)
+            }
         }
     }
 
@@ -1312,12 +1308,10 @@ class VideoDetailFragment :
         if (append) {
             NavigationHelper.enqueueOnPlayer(activity, queue, PlayerType.AUDIO)
         } else {
-            replaceQueueIfUserConfirms(
-                Runnable {
-                    NavigationHelper
-                        .playOnBackgroundPlayer(activity, queue, true)
-                }
-            )
+            replaceQueueIfUserConfirms {
+                NavigationHelper
+                    .playOnBackgroundPlayer(activity, queue, true)
+            }
         }
     }
 
@@ -2310,7 +2304,7 @@ class VideoDetailFragment :
         return item
     }
 
-    private fun replaceQueueIfUserConfirms(onAllow: Runnable) {
+    private fun replaceQueueIfUserConfirms(onAllow: () -> Unit) {
         ifPlayerElse({
             val activeQueue = player.playQueue
             // Player will have STATE_IDLE when a user pressed back button
@@ -2324,15 +2318,15 @@ class VideoDetailFragment :
                     .setPositiveButton(
                         R.string.ok,
                         DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                            onAllow.run()
+                            onAllow()
                             dialog!!.dismiss()
                         }
                     )
                     .show()
             }
-            onAllow.run()
+            onAllow()
         }) {
-            onAllow.run()
+            onAllow()
         }
     }
 
