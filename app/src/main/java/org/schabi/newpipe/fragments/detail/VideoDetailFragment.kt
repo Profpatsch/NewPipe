@@ -792,11 +792,16 @@ class VideoDetailFragment :
         if (PlayerHolder.isNotBoundYet()) {
             setPlayerAndThumbnailHeight()
         } else {
-            PlayerHolder.startService(
-                false, playerServiceEventListener,
-                playerHolderLifecycleEventListener
-            )
+            playerHolderStartService(playAfterConnect = false)
         }
+    }
+
+    private fun playerHolderStartService(playAfterConnect: Boolean) {
+        PlayerHolder.startService(
+            playAfterConnect,
+            playerServiceEventListener,
+            playerHolderLifecycleEventListener
+        )
     }
 
     override fun onKeyDown(keyCode: Int): Boolean =
@@ -1192,10 +1197,7 @@ class VideoDetailFragment :
         // TODO starting the service here means our lifecycle is all screwed up
         val s = playerService
         if (s == null) {
-            PlayerHolder.startService(
-                false, playerServiceEventListener,
-                playerHolderLifecycleEventListener
-            )
+            playerHolderStartService(playAfterConnect = false)
         } else {
             // FIXME Workaround #7427
             s.player.setRecovery()
@@ -1265,10 +1267,7 @@ class VideoDetailFragment :
         // See UI changes while remote playQueue changes
         // TODO: starting the service here means our lifecycle is all screwed up
         if (playerService == null) {
-            PlayerHolder.startService(
-                false, playerServiceEventListener,
-                playerHolderLifecycleEventListener
-            )
+            playerHolderStartService(playAfterConnect = false)
         }
 
         val queue = setupPlayQueueForIntent(append)
@@ -1286,10 +1285,7 @@ class VideoDetailFragment :
 
     private fun openMainPlayer() {
         if (playerService == null) {
-            PlayerHolder.startService(
-                autoPlayEnabled, playerServiceEventListener,
-                playerHolderLifecycleEventListener
-            )
+            playerHolderStartService(playAfterConnect = autoPlayEnabled)
             return
         }
         if (currentInfo == null) {
@@ -1572,11 +1568,7 @@ class VideoDetailFragment :
                         }
                         // Rebound to the service if it was closed via notification or mini player
                         if (PlayerHolder.isNotBoundYet()) {
-                            PlayerHolder.startService(
-                                false,
-                                playerServiceEventListener,
-                                playerHolderLifecycleEventListener
-                            )
+                            playerHolderStartService(playAfterConnect = false)
                         }
                     }
                 }
