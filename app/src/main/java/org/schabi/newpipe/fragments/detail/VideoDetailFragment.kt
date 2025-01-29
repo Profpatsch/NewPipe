@@ -136,11 +136,9 @@ import java.util.function.Consumer
 import kotlin.math.max
 
 class VideoDetailFragment :
-
+    PlayerHolderLifecycleEventListener,
     BaseStateFragment<StreamInfo>(),
     BackPressable,
-    PlayerServiceEventListener,
-    PlayerHolderLifecycleEventListener,
     OnKeyDownListener {
     // tabs
     private var showComments = false
@@ -217,7 +215,8 @@ class VideoDetailFragment :
     private var playerService: VideoDetailFragmentPlayer? = null
 
     private val videoDetailFragmentThumbnailStreamInfo = MutableStateFlow<VideoStreamInfo?>(null)
-    private val videoDetailFragmentThumbnailStreamProgress = MutableStateFlow<VideoStreamProgress?>(null)
+    private val videoDetailFragmentThumbnailStreamProgress =
+        MutableStateFlow<VideoStreamProgress?>(null)
     private val videoDetailFragmentHoldToXIndicator =
         MutableSharedFlow<TriggerHoldToXIndicator>(
             replay = 1,
@@ -234,7 +233,7 @@ class VideoDetailFragment :
 
     /** Ensure the player is set, and pass the [VideoDetailFragmentPlayer] to the block.
      * @return the result of [block], or [default] if no player is set */
-    private fun <T>ifPlayer(default: T, block: VideoDetailFragmentPlayer.() -> T): T {
+    private fun <T> ifPlayer(default: T, block: VideoDetailFragmentPlayer.() -> T): T {
         val p = playerService
         return if (p != null) {
             block(p)
@@ -245,7 +244,7 @@ class VideoDetailFragment :
 
     /** Ensure the player is set, and pass the [VideoDetailFragmentPlayer] to the block.
      * If no player is set, run [elseBlock] instead. */
-    private fun <T>ifPlayerElse(block: VideoDetailFragmentPlayer.() -> T, elseBlock: () -> T): T {
+    private fun <T> ifPlayerElse(block: VideoDetailFragmentPlayer.() -> T, elseBlock: () -> T): T {
         val p = playerService
         return if (p != null) {
             block(p)
@@ -744,12 +743,13 @@ class VideoDetailFragment :
                 View.VISIBLE
             else
                 View.GONE
-        binding.detailControlsCrashThePlayer.visibility = if (DEBUG && PreferenceManager.getDefaultSharedPreferences(requireContext())
-            .getBoolean(getString(R.string.show_crash_the_player_key), false)
-        )
-            View.VISIBLE
-        else
-            View.GONE
+        binding.detailControlsCrashThePlayer.visibility =
+            if (DEBUG && PreferenceManager.getDefaultSharedPreferences(requireContext())
+                .getBoolean(getString(R.string.show_crash_the_player_key), false)
+            )
+                View.VISIBLE
+            else
+                View.GONE
         accommodateForTvAndDesktopMode()
     }
 
@@ -790,7 +790,7 @@ class VideoDetailFragment :
         if (PlayerHolder.isNotBoundYet()) {
             setPlayerAndThumbnailHeight()
         } else {
-            PlayerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, videoDetailEventListener, this)
         }
     }
 
@@ -1125,7 +1125,8 @@ class VideoDetailFragment :
 
                         if (viewPagerVisibleHeight > tabLayoutHeight * 2) {
                             // no translation at all when viewPagerVisibleHeight > tabLayout.height * 3
-                            binding.tabLayout.translationY = max(0.0f, (tabLayoutHeight * 3 - viewPagerVisibleHeight))
+                            binding.tabLayout.translationY =
+                                max(0.0f, (tabLayoutHeight * 3 - viewPagerVisibleHeight))
                             binding.tabLayout.visibility = View.VISIBLE
                         } else {
                             // view pager is not visible enough
@@ -1186,7 +1187,7 @@ class VideoDetailFragment :
         // TODO starting the service here means our lifecycle is all screwed up
         val s = playerService
         if (s == null) {
-            PlayerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, videoDetailEventListener, this)
         } else {
             // FIXME Workaround #7427
             s.player.setRecovery()
@@ -1228,7 +1229,7 @@ class VideoDetailFragment :
             // restored (i.e. bottomSheetState) to STATE_EXPANDED.
             updateBottomSheetState(BottomSheetBehavior.STATE_EXPANDED)
             // toggle landscape in order to open directly in fullscreen
-            onFullscreenToggleButtonClicked()
+            videoDetailEventListener.onFullscreenToggleButtonClicked()
         }
 
         if (PreferenceManager.getDefaultSharedPreferences(activity)
@@ -1256,7 +1257,7 @@ class VideoDetailFragment :
         // See UI changes while remote playQueue changes
         // TODO: starting the service here means our lifecycle is all screwed up
         if (playerService == null) {
-            PlayerHolder.startService(false, this, this)
+            PlayerHolder.startService(false, videoDetailEventListener, this)
         }
 
         val queue = setupPlayQueueForIntent(append)
@@ -1274,7 +1275,7 @@ class VideoDetailFragment :
 
     private fun openMainPlayer() {
         if (playerService == null) {
-            PlayerHolder.startService(autoPlayEnabled, this, this)
+            PlayerHolder.startService(autoPlayEnabled, videoDetailEventListener, this)
             return
         }
         if (currentInfo == null) {
@@ -1559,7 +1560,7 @@ class VideoDetailFragment :
                         if (PlayerHolder.isNotBoundYet()) {
                             PlayerHolder.startService(
                                 false,
-                                this@VideoDetailFragment,
+                                videoDetailEventListener,
                                 this@VideoDetailFragment
                             )
                         }
@@ -1702,7 +1703,11 @@ class VideoDetailFragment :
 
         val noVideoStreams =
             info.videoStreams.isEmpty() && info.videoOnlyStreams.isEmpty()
-        val streamType = if (noVideoStreams) { VideoStreamType.Audio } else { VideoStreamType.Video }
+        val streamType = if (noVideoStreams) {
+            VideoStreamType.Audio
+        } else {
+            VideoStreamType.Video
+        }
         if (info.duration > 0) {
             videoDetailFragmentThumbnailStreamInfo.value = VideoStreamInfo(
                 streamType = streamType,
@@ -1759,11 +1764,13 @@ class VideoDetailFragment :
             }
         }
 
-        binding.detailControlsDownload.visibility = if (StreamTypeUtil.isLiveStream(info.streamType)) View.GONE else View.VISIBLE
-        binding.detailControlsBackground.visibility = if (info.audioStreams.isEmpty() && info.videoStreams.isEmpty())
-            View.GONE
-        else
-            View.VISIBLE
+        binding.detailControlsDownload.visibility =
+            if (StreamTypeUtil.isLiveStream(info.streamType)) View.GONE else View.VISIBLE
+        binding.detailControlsBackground.visibility =
+            if (info.audioStreams.isEmpty() && info.videoStreams.isEmpty())
+                View.GONE
+            else
+                View.VISIBLE
 
         binding.detailControlsPopup.visibility = if (noVideoStreams) View.GONE else View.VISIBLE
     }
@@ -1774,7 +1781,8 @@ class VideoDetailFragment :
         binding.detailSubChannelTextView.setSelected(true)
 
         if (info.uploaderSubscriberCount > -1) {
-            binding.detailUploaderTextView.text = Localization.shortSubscriberCount(activity, info.uploaderSubscriberCount)
+            binding.detailUploaderTextView.text =
+                Localization.shortSubscriberCount(activity, info.uploaderSubscriberCount)
             binding.detailUploaderTextView.visibility = View.VISIBLE
         } else {
             binding.detailUploaderTextView.visibility = View.GONE
@@ -1893,202 +1901,212 @@ class VideoDetailFragment :
     /*//////////////////////////////////////////////////////////////////////////
     // Player event listener
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onViewCreated() {
-        tryAddVideoPlayerView()
-    }
 
-    override fun onQueueUpdate(queue: PlayQueue) {
-        playQueue = queue
-        if (DEBUG) {
-            Log.d(
-                TAG,
-                (
-                    "onQueueUpdate() called with: serviceId = [" +
-                        serviceId + "], videoUrl = [" + url + "], name = [" +
-                        title + "], playQueue = [" + playQueue + "]"
-                    )
-            )
-        }
+    val videoDetailEventListener = object : PlayerServiceEventListener {
 
-        // Register broadcast receiver to listen to playQueue changes
-        // and hide the overlayPlayQueueButton when the playQueue is empty / destroyed.
-        if (playQueue != null && playQueue!!.broadcastReceiver != null) {
-            playQueue!!.broadcastReceiver!!.subscribe(
-                io.reactivex.rxjava3.functions.Consumer { event: PlayQueueEvent? -> updateOverlayPlayQueueButtonVisibility() }
-            )
-        }
-
-        // This should be the only place where we push data to stack.
-        // It will allow to have live instance of PlayQueue with actual information about
-        // deleted/added items inside Channel/Playlist queue and makes possible to have
-        // a history of played items
-        val stackPeek = stack.peek()
-        if (stackPeek != null && !stackPeek.playQueue.equalStreams(queue)) {
-            val playQueueItem = queue.item
-            if (playQueueItem != null) {
-                stack.push(
-                    StackItem(
-                        playQueueItem.serviceId, playQueueItem.url,
-                        playQueueItem.title, queue
-                    )
-                )
-                return
-            } // else continue below
-        }
-
-        val stackWithQueue = findQueueInStack(queue)
-        if (stackWithQueue != null) {
-            // On every MainPlayer service's destroy() playQueue gets disposed and
-            // no longer able to track progress. That's why we update our cached disposed
-            // queue with the new one that is active and have the same history.
-            // Without that the cached playQueue will have an old recovery position
-            stackWithQueue.playQueue = queue
-        }
-    }
-
-    override fun onPlaybackUpdate(
-        state: Int,
-        repeatMode: Int,
-        shuffled: Boolean,
-        parameters: PlaybackParameters?
-    ) {
-        overlay.setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
-    }
-
-    override fun onProgressUpdate(
-        currentProgress: Int,
-        duration: Int,
-        bufferPercent: Int
-    ) {
-        // Progress updates every second even if media is paused. It's useless until playing
-        if (ifPlayerImplies { ! player.isPlaying } || playQueue == null) {
-            return
-        }
-
-        ifPlayer {
-            if (player.playQueue!!.item!!.url == url) {
-                updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
-            }
-        }
-    }
-
-    override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue) {
-        val item = findQueueInStack(queue)
-        if (item != null) {
-            // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
-            // every new played stream gives new title and url.
-            // StackItem contains information about first played stream. Let's update it here
-            item.title = info.name
-            item.url = info.url
-        }
-        // They are not equal when user watches something in popup while browsing in fragment and
-        // then changes screen orientation. In that case the fragment will set itself as
-        // a service listener and will receive initial call to onMetadataUpdate()
-        if (!queue.equalStreams(playQueue)) {
-            return
-        }
-
-        overlay.updateOverlayData(info.name, info.uploaderName, info.thumbnails)
-        if (currentInfo != null && info.url == currentInfo!!.url) {
-            return
-        }
-
-        currentInfo = info
-        setInitialData(info.serviceId, info.url, info.name, queue)
-        setAutoPlay(false)
-        // Delay execution just because it freezes the main thread, and while playing
-        // next/previous video you see visual glitches
-        // (when non-vertical video goes after vertical video)
-        prepareAndHandleInfoIfNeededAfterDelay(info, true, 200)
-    }
-
-    override fun onPlayerError(error: PlaybackException?, isCatchableException: Boolean) {
-        if (!isCatchableException) {
-            // Properly exit from fullscreen
-            toggleFullscreenIfInFullscreenMode()
-            hideMainPlayerOnLoadingNewStream()
-        }
-    }
-
-    override fun onServiceStopped() {
-        overlay.setOverlayPlayPauseImage(false)
-        if (currentInfo != null) {
-            overlay.updateOverlayData(
-                currentInfo!!.name,
-                currentInfo!!.uploaderName,
-                currentInfo!!.thumbnails
-            )
-        }
-        updateOverlayPlayQueueButtonVisibility()
-    }
-
-    override fun onFullscreenStateChanged(fullscreen: Boolean) {
-        setupBrightness()
-        ifPlayer {
-            if (mainPlayerUi == null ||
-                firstVideoPlayerUi?.hasParentView() != true
-            ) {
-                return@ifPlayer
-            }
-
-            if (fullscreen) {
-                hideSystemUiIfNeeded()
-                overlay.requestPlayPauseButtonFocus()
-            } else {
-                showSystemUi()
-            }
-
-            if (binding.relatedItemsLayout != null) {
-                binding.relatedItemsLayout!!.visibility = if (fullscreen) View.GONE else View.VISIBLE
-            }
-            scrollToTop()
-
+        override fun onViewCreated() {
             tryAddVideoPlayerView()
         }
-    }
 
-    override fun onFullscreenToggleButtonClicked() {
-        // In tablet user experience will be better if screen will not be rotated
-        // from landscape to portrait every time.
-        // Just turn on fullscreen mode in landscape orientation
-        // or portrait & unlocked global orientation
-        val isLandscape = DeviceUtils.isLandscape(requireContext())
-        if (DeviceUtils.isTablet(activity) &&
-            (!PlayerHelper.globalScreenOrientationLocked(activity) || isLandscape)
-        ) {
-            ifPlayer {
-                mainPlayerUi?.toggleFullscreen()
+        override fun onQueueUpdate(queue: PlayQueue) {
+            playQueue = queue
+            if (DEBUG) {
+                Log.d(
+                    TAG,
+                    (
+                        "onQueueUpdate() called with: serviceId = [" +
+                            serviceId + "], videoUrl = [" + url + "], name = [" +
+                            title + "], playQueue = [" + playQueue + "]"
+                        )
+                )
             }
-            return
+
+            // Register broadcast receiver to listen to playQueue changes
+            // and hide the overlayPlayQueueButton when the playQueue is empty / destroyed.
+            if (playQueue != null && playQueue!!.broadcastReceiver != null) {
+                playQueue!!.broadcastReceiver!!.subscribe(
+                    io.reactivex.rxjava3.functions.Consumer { event: PlayQueueEvent? -> updateOverlayPlayQueueButtonVisibility() }
+                )
+            }
+
+            // This should be the only place where we push data to stack.
+            // It will allow to have live instance of PlayQueue with actual information about
+            // deleted/added items inside Channel/Playlist queue and makes possible to have
+            // a history of played items
+            val stackPeek = stack.peek()
+            if (stackPeek != null && !stackPeek.playQueue.equalStreams(queue)) {
+                val playQueueItem = queue.item
+                if (playQueueItem != null) {
+                    stack.push(
+                        StackItem(
+                            playQueueItem.serviceId, playQueueItem.url,
+                            playQueueItem.title, queue
+                        )
+                    )
+                    return
+                } // else continue below
+            }
+
+            val stackWithQueue = findQueueInStack(queue)
+            if (stackWithQueue != null) {
+                // On every MainPlayer service's destroy() playQueue gets disposed and
+                // no longer able to track progress. That's why we update our cached disposed
+                // queue with the new one that is active and have the same history.
+                // Without that the cached playQueue will have an old recovery position
+                stackWithQueue.playQueue = queue
+            }
         }
 
-        val newOrientation = if (isLandscape)
-            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        else
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        override fun onPlaybackUpdate(
+            state: Int,
+            repeatMode: Int,
+            shuffled: Boolean,
+            parameters: PlaybackParameters?
+        ) {
+            overlay.setOverlayPlayPauseImage(ifPlayerAnd { player.isPlaying })
+        }
 
-        activity.setRequestedOrientation(newOrientation)
-    }
-
-    /*
-     * Will scroll down to description view after long click on moreOptionsButton
-     * */
-    override fun onMoreOptionsLongClicked() {
-        val params =
-            binding.appBarLayout.layoutParams as CoordinatorLayout.LayoutParams
-        val behavior = params.behavior as AppBarLayout.Behavior?
-        val valueAnimator = ValueAnimator
-            .ofInt(0, -binding.playerPlaceholder.height)
-        valueAnimator.interpolator = DecelerateInterpolator()
-        valueAnimator.addUpdateListener(
-            AnimatorUpdateListener { animation: ValueAnimator? ->
-                behavior!!.setTopAndBottomOffset(animation!!.getAnimatedValue() as Int)
-                binding.appBarLayout.requestLayout()
+        override fun onProgressUpdate(
+            currentProgress: Int,
+            duration: Int,
+            bufferPercent: Int
+        ) {
+            // Progress updates every second even if media is paused. It's useless until playing
+            if (ifPlayerImplies { !player.isPlaying } || playQueue == null) {
+                return
             }
-        )
-        valueAnimator.interpolator = DecelerateInterpolator()
-        valueAnimator.setDuration(500)
-        valueAnimator.start()
+
+            ifPlayer {
+                if (player.playQueue!!.item!!.url == url) {
+                    updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
+                }
+            }
+        }
+
+        override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue) {
+            val item = findQueueInStack(queue)
+            if (item != null) {
+                // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
+                // every new played stream gives new title and url.
+                // StackItem contains information about first played stream. Let's update it here
+                item.title = info.name
+                item.url = info.url
+            }
+            // They are not equal when user watches something in popup while browsing in fragment and
+            // then changes screen orientation. In that case the fragment will set itself as
+            // a service listener and will receive initial call to onMetadataUpdate()
+            if (!queue.equalStreams(playQueue)) {
+                return
+            }
+
+            overlay.updateOverlayData(info.name, info.uploaderName, info.thumbnails)
+            if (currentInfo != null && info.url == currentInfo!!.url) {
+                return
+            }
+
+            currentInfo = info
+            setInitialData(info.serviceId, info.url, info.name, queue)
+            setAutoPlay(false)
+            // Delay execution just because it freezes the main thread, and while playing
+            // next/previous video you see visual glitches
+            // (when non-vertical video goes after vertical video)
+            prepareAndHandleInfoIfNeededAfterDelay(info, true, 200)
+        }
+
+        override fun onPlayerError(error: PlaybackException?, isCatchableException: Boolean) {
+            if (!isCatchableException) {
+                // Properly exit from fullscreen
+                toggleFullscreenIfInFullscreenMode()
+                hideMainPlayerOnLoadingNewStream()
+            }
+        }
+
+        override fun onServiceStopped() {
+            overlay.setOverlayPlayPauseImage(false)
+            if (currentInfo != null) {
+                overlay.updateOverlayData(
+                    currentInfo!!.name,
+                    currentInfo!!.uploaderName,
+                    currentInfo!!.thumbnails
+                )
+            }
+            updateOverlayPlayQueueButtonVisibility()
+        }
+
+        override fun onFullscreenStateChanged(fullscreen: Boolean) {
+            setupBrightness()
+            ifPlayer {
+                if (mainPlayerUi == null ||
+                    firstVideoPlayerUi?.hasParentView() != true
+                ) {
+                    return@ifPlayer
+                }
+
+                if (fullscreen) {
+                    hideSystemUiIfNeeded()
+                    overlay.requestPlayPauseButtonFocus()
+                } else {
+                    showSystemUi()
+                }
+
+                if (binding.relatedItemsLayout != null) {
+                    binding.relatedItemsLayout!!.visibility =
+                        if (fullscreen) View.GONE else View.VISIBLE
+                }
+                scrollToTop()
+
+                tryAddVideoPlayerView()
+            }
+        }
+
+        override fun onFullscreenToggleButtonClicked() {
+            // In tablet user experience will be better if screen will not be rotated
+            // from landscape to portrait every time.
+            // Just turn on fullscreen mode in landscape orientation
+            // or portrait & unlocked global orientation
+            val isLandscape = DeviceUtils.isLandscape(requireContext())
+            if (DeviceUtils.isTablet(activity) &&
+                (!PlayerHelper.globalScreenOrientationLocked(activity) || isLandscape)
+            ) {
+                ifPlayer {
+                    mainPlayerUi?.toggleFullscreen()
+                }
+                return
+            }
+
+            val newOrientation = if (isLandscape)
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            else
+                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+
+            activity.setRequestedOrientation(newOrientation)
+        }
+
+        /*
+             * Will scroll down to description view after long click on moreOptionsButton
+             * */
+        override fun onMoreOptionsLongClicked() {
+            val params =
+                binding.appBarLayout.layoutParams as CoordinatorLayout.LayoutParams
+            val behavior = params.behavior as AppBarLayout.Behavior?
+            val valueAnimator = ValueAnimator
+                .ofInt(0, -binding.playerPlaceholder.height)
+            valueAnimator.interpolator = DecelerateInterpolator()
+            valueAnimator.addUpdateListener(
+                AnimatorUpdateListener { animation: ValueAnimator? ->
+                    behavior!!.setTopAndBottomOffset(animation!!.getAnimatedValue() as Int)
+                    binding.appBarLayout.requestLayout()
+                }
+            )
+            valueAnimator.interpolator = DecelerateInterpolator()
+            valueAnimator.setDuration(500)
+            valueAnimator.start()
+        }
+
+        // Listener implementation
+        override fun hideSystemUiIfNeeded() {
+            this@VideoDetailFragment.hideSystemUiIfNeeded()
+        }
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -2153,7 +2171,7 @@ class VideoDetailFragment :
     }
 
     // Listener implementation
-    override fun hideSystemUiIfNeeded() {
+    fun hideSystemUiIfNeeded() {
         if (ifPlayerAnd { isFullscreen } &&
             bottomSheetBehavior!!.getState() == BottomSheetBehavior.STATE_EXPANDED
         ) {
