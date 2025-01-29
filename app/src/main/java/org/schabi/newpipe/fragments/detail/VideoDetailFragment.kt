@@ -1271,7 +1271,23 @@ class VideoDetailFragment :
         ) {
             showExternalVideoPlaybackDialog()
         } else {
-            replaceQueueIfUserConfirms(Runnable { this.openMainPlayer() })
+            replaceQueueIfUserConfirms(
+                Runnable {
+                    playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return@Runnable }
+                    if (currentInfo == null) {
+                        return@Runnable
+                    }
+
+                    val queue = setupPlayQueueForIntent(false)
+                    tryAddVideoPlayerView()
+
+                    val playerIntent = NavigationHelper.getPlayerIntent<PlayerService?>(
+                        requireContext(),
+                        PlayerService::class.java, queue, true, autoPlayEnabled
+                    )
+                    ContextCompat.startForegroundService(activity, playerIntent)
+                }
+            )
         }
     }
 
@@ -1303,22 +1319,6 @@ class VideoDetailFragment :
                 }
             )
         }
-    }
-
-    private fun openMainPlayer() {
-        playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return }
-        if (currentInfo == null) {
-            return
-        }
-
-        val queue = setupPlayQueueForIntent(false)
-        tryAddVideoPlayerView()
-
-        val playerIntent = NavigationHelper.getPlayerIntent<PlayerService?>(
-            requireContext(),
-            PlayerService::class.java, queue, true, autoPlayEnabled
-        )
-        ContextCompat.startForegroundService(activity, playerIntent)
     }
 
     /**
