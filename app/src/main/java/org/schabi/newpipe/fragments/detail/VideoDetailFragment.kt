@@ -2315,29 +2315,25 @@ class VideoDetailFragment :
             val activeQueue = player.playQueue
             // Player will have STATE_IDLE when a user pressed back button
             if (PlayerHelper.isClearingQueueConfirmationRequired(activity) &&
-                ! player.isStopped &&
+                !player.isStopped &&
                 activeQueue != null && !activeQueue.equalStreams(playQueue)
             ) {
-                showClearingQueueConfirmation(onAllow)
+                AlertDialog.Builder(this@VideoDetailFragment.activity)
+                    .setTitle(R.string.clear_queue_confirmation_description)
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton(
+                        R.string.ok,
+                        DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
+                            onAllow.run()
+                            dialog!!.dismiss()
+                        }
+                    )
+                    .show()
             }
             onAllow.run()
         }) {
             onAllow.run()
         }
-    }
-
-    private fun showClearingQueueConfirmation(onAllow: Runnable) {
-        AlertDialog.Builder(activity)
-            .setTitle(R.string.clear_queue_confirmation_description)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(
-                R.string.ok,
-                DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                    onAllow.run()
-                    dialog!!.dismiss()
-                }
-            )
-            .show()
     }
 
     private fun showExternalVideoPlaybackDialog() {
