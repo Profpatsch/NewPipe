@@ -789,10 +789,36 @@ class VideoDetailFragment :
         )
 
         setupBottomPlayer()
+        playerHolderStartServiceIfAlreadyBound(playAfterConnect = false)
+    }
+
+    private fun playerHolderStartServiceIfAlreadyBound(playAfterConnect: Boolean) {
         if (PlayerHolder.isNotBoundYet()) {
             setPlayerAndThumbnailHeight()
         } else {
-            playerHolderStartService(playAfterConnect = false)
+            playerHolderStartService(playAfterConnect)
+        }
+    }
+
+    private fun playerHolderStartServiceIfNotBoundYet(playAfterConnect: Boolean) {
+        if (PlayerHolder.isNotBoundYet()) {
+            playerHolderStartService(playAfterConnect)
+        }
+    }
+
+    /**
+     * @return `null` if the player was not started, `Unit` if it was started.
+     */
+    private fun playerHolderStartServiceIfNull(
+        playAfterConnect: Boolean,
+        orBlock: VideoDetailFragmentPlayer.() -> Unit = {}
+    ): Unit? {
+        val p = playerService
+        return if (p == null) {
+            playerHolderStartService(playAfterConnect)
+        } else {
+            p.orBlock()
+            null
         }
     }
 
@@ -1196,11 +1222,9 @@ class VideoDetailFragment :
         // See UI changes while remote playQueue changes
         // TODO starting the service here means our lifecycle is all screwed up
         val s = playerService
-        if (s == null) {
-            playerHolderStartService(playAfterConnect = false)
-        } else {
+        playerHolderStartServiceIfNull(playAfterConnect = false) {
             // FIXME Workaround #7427
-            s.player.setRecovery()
+            player.setRecovery()
         }
 
         toggleFullscreenIfInFullscreenMode()
@@ -1266,9 +1290,7 @@ class VideoDetailFragment :
     private fun openNormalBackgroundPlayer(append: Boolean) {
         // See UI changes while remote playQueue changes
         // TODO: starting the service here means our lifecycle is all screwed up
-        if (playerService == null) {
-            playerHolderStartService(playAfterConnect = false)
-        }
+        playerHolderStartServiceIfNull(playAfterConnect = false)
 
         val queue = setupPlayQueueForIntent(append)
         if (append) {
@@ -1284,10 +1306,7 @@ class VideoDetailFragment :
     }
 
     private fun openMainPlayer() {
-        if (playerService == null) {
-            playerHolderStartService(playAfterConnect = autoPlayEnabled)
-            return
-        }
+        playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return }
         if (currentInfo == null) {
             return
         }
@@ -1567,9 +1586,7 @@ class VideoDetailFragment :
                             bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_COLLAPSED)
                         }
                         // Rebound to the service if it was closed via notification or mini player
-                        if (PlayerHolder.isNotBoundYet()) {
-                            playerHolderStartService(playAfterConnect = false)
-                        }
+                        playerHolderStartServiceIfNotBoundYet(playAfterConnect = false)
                     }
                 }
             }
