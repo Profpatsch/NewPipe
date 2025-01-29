@@ -136,7 +136,6 @@ import java.util.function.Consumer
 import kotlin.math.max
 
 class VideoDetailFragment :
-    PlayerHolderLifecycleEventListener,
     BaseStateFragment<StreamInfo>(),
     BackPressable,
     OnKeyDownListener {
@@ -275,49 +274,52 @@ class VideoDetailFragment :
     /*//////////////////////////////////////////////////////////////////////////
     // Service management
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onServiceConnected(
-        connectedPlayerService: PlayerService,
-        playAfterConnect: Boolean
-    ) {
-        val playerServiceL = VideoDetailFragmentPlayer(connectedPlayerService)
-        playerService = playerServiceL
 
-        // It will do nothing if the player is not in fullscreen mode
-        hideSystemUiIfNeeded()
-
-        if (!connectedPlayerService.player.isVideoPlayerSelected && !playAfterConnect) {
-            return
-        }
-
-        val playerUi: MainPlayerUi? = playerServiceL.mainPlayerUi
-        if (DeviceUtils.isLandscape(requireContext())) {
-            // If the video is playing but orientation changed
-            // let's make the video in fullscreen again
-            checkLandscape()
-        } else if (playerUi != null && playerUi.isFullscreen && !playerUi.isVerticalVideo &&
-            // Tablet UI has orientation-independent fullscreen
-            !DeviceUtils.isTablet(activity)
+    val playerHolderLifecycleEventListener = object : PlayerHolderLifecycleEventListener {
+        override fun onServiceConnected(
+            connectedPlayerService: PlayerService,
+            playAfterConnect: Boolean
         ) {
-            // Device is in portrait orientation after rotation but UI is in fullscreen.
-            // Return back to non-fullscreen state
-            playerUi.exitFullscreen()
+            val playerServiceL = VideoDetailFragmentPlayer(connectedPlayerService)
+            playerService = playerServiceL
+
+            // It will do nothing if the player is not in fullscreen mode
+            hideSystemUiIfNeeded()
+
+            if (!connectedPlayerService.player.isVideoPlayerSelected && !playAfterConnect) {
+                return
+            }
+
+            val playerUi: MainPlayerUi? = playerServiceL.mainPlayerUi
+            if (DeviceUtils.isLandscape(requireContext())) {
+                // If the video is playing but orientation changed
+                // let's make the video in fullscreen again
+                checkLandscape()
+            } else if (playerUi != null && playerUi.isFullscreen && !playerUi.isVerticalVideo &&
+                // Tablet UI has orientation-independent fullscreen
+                !DeviceUtils.isTablet(activity)
+            ) {
+                // Device is in portrait orientation after rotation but UI is in fullscreen.
+                // Return back to non-fullscreen state
+                playerUi.exitFullscreen()
+            }
+
+            if (playAfterConnect ||
+                (
+                    currentInfo != null && isAutoplayEnabled() &&
+                        playerUi == null
+                    )
+            ) {
+                autoPlayEnabled = true // forcefully start playing
+                openVideoPlayerAutoFullscreen()
+            }
+            updateOverlayPlayQueueButtonVisibility()
         }
 
-        if (playAfterConnect ||
-            (
-                currentInfo != null && isAutoplayEnabled() &&
-                    playerUi == null
-                )
-        ) {
-            autoPlayEnabled = true // forcefully start playing
-            openVideoPlayerAutoFullscreen()
+        override fun onServiceDisconnected() {
+            playerService = null
+            restoreDefaultBrightness()
         }
-        updateOverlayPlayQueueButtonVisibility()
-    }
-
-    override fun onServiceDisconnected() {
-        playerService = null
-        restoreDefaultBrightness()
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -790,7 +792,10 @@ class VideoDetailFragment :
         if (PlayerHolder.isNotBoundYet()) {
             setPlayerAndThumbnailHeight()
         } else {
-            PlayerHolder.startService(false, videoDetailEventListener, this)
+            PlayerHolder.startService(
+                false, playerServiceEventListener,
+                playerHolderLifecycleEventListener
+            )
         }
     }
 
@@ -1187,7 +1192,10 @@ class VideoDetailFragment :
         // TODO starting the service here means our lifecycle is all screwed up
         val s = playerService
         if (s == null) {
-            PlayerHolder.startService(false, videoDetailEventListener, this)
+            PlayerHolder.startService(
+                false, playerServiceEventListener,
+                playerHolderLifecycleEventListener
+            )
         } else {
             // FIXME Workaround #7427
             s.player.setRecovery()
@@ -1229,7 +1237,7 @@ class VideoDetailFragment :
             // restored (i.e. bottomSheetState) to STATE_EXPANDED.
             updateBottomSheetState(BottomSheetBehavior.STATE_EXPANDED)
             // toggle landscape in order to open directly in fullscreen
-            videoDetailEventListener.onFullscreenToggleButtonClicked()
+            playerServiceEventListener.onFullscreenToggleButtonClicked()
         }
 
         if (PreferenceManager.getDefaultSharedPreferences(activity)
@@ -1257,7 +1265,10 @@ class VideoDetailFragment :
         // See UI changes while remote playQueue changes
         // TODO: starting the service here means our lifecycle is all screwed up
         if (playerService == null) {
-            PlayerHolder.startService(false, videoDetailEventListener, this)
+            PlayerHolder.startService(
+                false, playerServiceEventListener,
+                playerHolderLifecycleEventListener
+            )
         }
 
         val queue = setupPlayQueueForIntent(append)
@@ -1275,7 +1286,10 @@ class VideoDetailFragment :
 
     private fun openMainPlayer() {
         if (playerService == null) {
-            PlayerHolder.startService(autoPlayEnabled, videoDetailEventListener, this)
+            PlayerHolder.startService(
+                autoPlayEnabled, playerServiceEventListener,
+                playerHolderLifecycleEventListener
+            )
             return
         }
         if (currentInfo == null) {
@@ -1560,8 +1574,8 @@ class VideoDetailFragment :
                         if (PlayerHolder.isNotBoundYet()) {
                             PlayerHolder.startService(
                                 false,
-                                videoDetailEventListener,
-                                this@VideoDetailFragment
+                                playerServiceEventListener,
+                                playerHolderLifecycleEventListener
                             )
                         }
                     }
@@ -1902,7 +1916,7 @@ class VideoDetailFragment :
     // Player event listener
     ////////////////////////////////////////////////////////////////////////// */
 
-    val videoDetailEventListener = object : PlayerServiceEventListener {
+    val playerServiceEventListener = object : PlayerServiceEventListener {
 
         override fun onViewCreated() {
             tryAddVideoPlayerView()
