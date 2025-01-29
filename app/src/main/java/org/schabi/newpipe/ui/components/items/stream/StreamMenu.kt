@@ -32,7 +32,7 @@ fun StreamMenu(
     val streamViewModel = viewModel<StreamViewModel>()
 
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
-        if (PlayerHolder.isPlayQueueReady()) {
+        PlayerHolder.isPlayQueueReady()?.run {
             StreamMenuItem(
                 text = R.string.enqueue_stream,
                 onClick = {
@@ -43,7 +43,7 @@ fun StreamMenu(
                 }
             )
 
-            if (PlayerHolder.getQueuePosition() < PlayerHolder.getQueueSize() - 1) {
+            if (isInMiddleOfQueue) {
                 StreamMenuItem(
                     text = R.string.enqueue_next_stream,
                     onClick = {

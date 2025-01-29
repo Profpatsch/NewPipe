@@ -39,7 +39,7 @@ object PlayerHolder {
     private var bound = false
 
     private var playerService: PlayerService? = null
-    private var player: Player? = null
+    private val player: Player?
         get() = playerService?.player
 
     /**
@@ -57,23 +57,29 @@ object PlayerHolder {
     fun isPlayerOpen(): Boolean =
         playerService != null
 
+    data class PlayQueueInfo(
+        /**
+         * Whether we are currently in the middle of the queue (i.e. not on the last element)
+         */
+        val isInMiddleOfQueue: Boolean
+    )
+
     /**
      * Use this method to only allow the user to manipulate the play queue (e.g. by enqueueing via
      * the stream long press menu) when there actually is a play queue to manipulate.
-     * @return true only if the player is open and its play queue is ready (i.e. it is not null)
+     * @return the queue state only if the player is open and its play queue is ready (i.e. it is not null)
      */
-    fun isPlayQueueReady(): Boolean =
-        player?.playQueue != null
+    fun isPlayQueueReady(): PlayQueueInfo? {
+        return player?.playQueue?.let { q ->
+            PlayQueueInfo(
+                isInMiddleOfQueue = q.index < (q.size() - 1)
+            )
+        }
+    }
 
     fun isNotBoundYet(): Boolean {
         return !bound
     }
-
-    fun getQueueSize(): Int =
-        player?.playQueue?.size() ?: 0
-
-    fun getQueuePosition(): Int =
-        player?.playQueue?.index ?: 0
 
     /**
      * Helper to handle context in common place as using the same

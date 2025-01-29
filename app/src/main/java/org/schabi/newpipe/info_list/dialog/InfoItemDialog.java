@@ -253,10 +253,11 @@ public final class InfoItemDialog {
          */
         public Builder addEnqueueEntriesIfNeeded() {
             final PlayerHolder holder = PlayerHolder.INSTANCE;
-            if (holder.isPlayQueueReady()) {
+            final var playQueue = holder.isPlayQueueReady();
+            if (playQueue != null) {
                 addEntry(StreamDialogDefaultEntry.ENQUEUE);
 
-                if (holder.getQueuePosition() < holder.getQueueSize() - 1) {
+                if (playQueue.isInMiddleOfQueue()) {
                     addEntry(StreamDialogDefaultEntry.ENQUEUE_NEXT);
                 }
             }
