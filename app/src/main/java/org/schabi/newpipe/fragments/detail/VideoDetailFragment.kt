@@ -127,6 +127,7 @@ import org.schabi.newpipe.util.external_communication.KoreUtils
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import org.schabi.newpipe.util.image.CoilHelper.loadAvatar
 import org.schabi.newpipe.util.image.CoilHelper.loadDetailsThumbnail
+import java.io.Serializable
 import java.lang.Exception
 import java.lang.StringBuilder
 import java.util.ArrayList
@@ -886,7 +887,7 @@ class VideoDetailFragment :
 
         setInitialData(
             item.serviceId, item.url,
-            if (item.title == null) "" else item.title, item.playQueue
+            item.title ?: "", item.playQueue
         )
         startLoading(false)
 
@@ -1018,13 +1019,16 @@ class VideoDetailFragment :
                         handleResult(result)
                         showContent()
                         if (if (addToBackStack != null) addToBackStack else stack.isEmpty()) {
+                            val pq = playQueue ?: SinglePlayQueue(result)
+
+                            // only update the play queue if it was null
                             if (playQueue == null) {
-                                playQueue = SinglePlayQueue(result)
+                                playQueue = pq
                             }
                             if (stack.isEmpty() || !stack.peek()!!.playQueue
-                                .equalStreams(playQueue)
+                                .equalStreams(pq)
                             ) {
-                                stack.push(StackItem(serviceId, url, title, playQueue))
+                                stack.push(StackItem(serviceId, url, title, pq))
                             }
                         }
 
@@ -2289,6 +2293,17 @@ class VideoDetailFragment :
      * */
     private fun wasCleared(): Boolean {
         return url == null
+    }
+
+    internal class StackItem(
+        val serviceId: Int,
+        var url: String?,
+        var title: String?,
+        var playQueue: PlayQueue
+    ) : Serializable {
+        override fun toString(): String {
+            return serviceId.toString() + ":" + url + " > " + title
+        }
     }
 
     private fun findQueueInStack(queue: PlayQueue?): StackItem? {
