@@ -935,7 +935,7 @@ class VideoDetailFragment :
         }
 
         setInitialData(newServiceId, newUrl, newTitle, newQueue)
-        startLoading(false, true)
+        startLoading(false, AddToBackStack.Always)
     }
 
     private fun prepareAndHandleInfoIfNeededAfterDelay(
@@ -985,10 +985,15 @@ class VideoDetailFragment :
     }
 
     public override fun startLoading(forceLoad: Boolean) {
-        startLoading(forceLoad, null)
+        startLoading(forceLoad, AddToBackStack.OnlyIfStackEmpty)
     }
 
-    private fun startLoading(forceLoad: Boolean, addToBackStack: Boolean?) {
+    enum class AddToBackStack {
+        OnlyIfStackEmpty,
+        Always
+    }
+
+    private fun startLoading(forceLoad: Boolean, addToBackStack: AddToBackStack) {
         super.startLoading(forceLoad)
 
         initTabs()
@@ -1013,7 +1018,11 @@ class VideoDetailFragment :
                     } else {
                         handleResult(result)
                         showContent()
-                        if (if (addToBackStack != null) addToBackStack else stack.isEmpty()) {
+                        val addToBackStackB = when (addToBackStack) {
+                            AddToBackStack.OnlyIfStackEmpty -> stack.isEmpty()
+                            AddToBackStack.Always -> true
+                        }
+                        if (addToBackStackB) {
                             val pq = playQueue ?: SinglePlayQueue(result)
 
                             // only update the play queue if it was null
@@ -1025,7 +1034,6 @@ class VideoDetailFragment :
                             if (firstInStack == null || !firstInStack.playQueue.equalStreams(pq)) {
                                 stack.push(StackItem(serviceId, url, title, pq))
                             }
-
                         }
 
                         if (isAutoplayEnabled()) {
