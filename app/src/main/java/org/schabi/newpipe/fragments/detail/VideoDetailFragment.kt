@@ -405,7 +405,7 @@ class VideoDetailFragment :
         if (activity.isFinishing) {
             playQueue = null
             currentInfo = null
-            stack = LinkedList<StackItem?>()
+            stack = LinkedList<StackItem>()
         }
     }
 
@@ -1968,13 +1968,12 @@ class VideoDetailFragment :
                 } // else continue below
             }
 
-            val stackWithQueue = findQueueInStack(queue)
-            if (stackWithQueue != null) {
+            findQueueInStack(queue)?.run {
                 // On every MainPlayer service's destroy() playQueue gets disposed and
                 // no longer able to track progress. That's why we update our cached disposed
                 // queue with the new one that is active and have the same history.
                 // Without that the cached playQueue will have an old recovery position
-                stackWithQueue.playQueue = queue
+                playQueue = queue
             }
         }
 
@@ -2005,13 +2004,12 @@ class VideoDetailFragment :
         }
 
         override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue) {
-            val item = findQueueInStack(queue)
-            if (item != null) {
+            findQueueInStack(queue)?.run {
                 // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
                 // every new played stream gives new title and url.
                 // StackItem contains information about first played stream. Let's update it here
-                item.title = info.name
-                item.url = info.url
+                title = info.name
+                url = info.url
             }
             // They are not equal when user watches something in popup while browsing in fragment and
             // then changes screen orientation. In that case the fragment will set itself as
@@ -2306,17 +2304,10 @@ class VideoDetailFragment :
         }
     }
 
-    private fun findQueueInStack(queue: PlayQueue?): StackItem? {
-        var item: StackItem? = null
-        val iterator: MutableIterator<StackItem?> = stack.descendingIterator()
-        while (iterator.hasNext()) {
-            val next = iterator.next()!!
-            if (next.playQueue.equalStreams(queue)) {
-                item = next
-                break
-            }
+    private fun findQueueInStack(queue: PlayQueue): StackItem? {
+        return stack.findLast {
+            it.playQueue.equalStreams(queue) == true
         }
-        return item
     }
 
     private suspend fun replaceQueueIfUserConfirms() {
@@ -2723,6 +2714,6 @@ class VideoDetailFragment :
          * Stack that contains the "navigation history".<br></br>
          * The peek is the current video.
          */
-        private var stack = LinkedList<StackItem?>()
+        private var stack = LinkedList<StackItem>()
     }
 }
