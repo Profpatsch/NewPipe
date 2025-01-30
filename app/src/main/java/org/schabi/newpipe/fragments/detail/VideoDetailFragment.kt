@@ -923,11 +923,10 @@ class VideoDetailFragment :
         newQueue: PlayQueue?
     ) {
         ifPlayer {
+            val oldQueueUrl = playQueue?.item?.url
             if (
                 newQueue != null &&
-                playQueue != null &&
-                playQueue!!.item != null &&
-                playQueue!!.item!!.url != newUrl
+                oldQueueUrl != newUrl
             ) {
                 // Preloading can be disabled since playback is surely being replaced.
                 player.disablePreloadingOfCurrentTrack()
