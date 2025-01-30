@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import coil3.util.CoilUtils.dispose
 import com.evernote.android.state.State
@@ -63,6 +64,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.schabi.newpipe.App
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.stream.model.StreamEntity
@@ -133,6 +135,8 @@ import java.util.List
 import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.max
 
 class VideoDetailFragment :
@@ -510,16 +514,20 @@ class VideoDetailFragment :
 
         binding.detailControlsBackground.setOnClickListener(
             View.OnClickListener { v: View? ->
-                openBackgroundPlayer(
-                    false
-                )
+                lifecycleScope.launch {
+                    openBackgroundPlayer(
+                        false
+                    )
+                }
             }
         )
         binding.detailControlsPopup.setOnClickListener(
             View.OnClickListener { v: View? ->
-                openPopupPlayer(
-                    false
-                )
+                lifecycleScope.launch {
+                    openPopupPlayer(
+                        false
+                    )
+                }
             }
         )
         binding.detailControlsPlaylistAppend.setOnClickListener(
@@ -689,13 +697,15 @@ class VideoDetailFragment :
         )
     }
 
-    private fun makeOnLongClickListener(block: (StreamInfo) -> Unit): OnLongClickListener {
+    private fun makeOnLongClickListener(block: suspend (StreamInfo) -> Unit): OnLongClickListener {
         return OnLongClickListener { v: View? ->
             val ci = currentInfo
             if (isLoading.get() || ci == null) {
                 return@OnLongClickListener false
             }
-            block(ci)
+            lifecycleScope.launch {
+                block(ci)
+            }
             true
         }
     }
@@ -1195,7 +1205,7 @@ class VideoDetailFragment :
         }
     }
 
-    private fun openBackgroundPlayer(append: Boolean) {
+    private suspend fun openBackgroundPlayer(append: Boolean) {
         val useExternalAudioPlayer = PreferenceManager
             .getDefaultSharedPreferences(activity)
             .getBoolean(activity.getString(R.string.use_external_audio_player_key), false)
@@ -1214,14 +1224,13 @@ class VideoDetailFragment :
         }
     }
 
-    private fun openPopupPlayer(append: Boolean) {
+    private suspend fun openPopupPlayer(append: Boolean) {
         if (!PermissionHelper.isPopupEnabledElseAsk(activity)) {
             return
         }
 
         // See UI changes while remote playQueue changes
         // TODO starting the service here means our lifecycle is all screwed up
-        val s = playerService
         playerHolderStartServiceIfNull(playAfterConnect = false) {
             // FIXME Workaround #7427
             player.setRecovery()
@@ -1233,10 +1242,9 @@ class VideoDetailFragment :
         if (append) { // resumePlayback: false
             NavigationHelper.enqueueOnPlayer(activity, queue, PlayerType.POPUP)
         } else {
-            replaceQueueIfUserConfirms {
-                NavigationHelper
-                    .playOnPopupPlayer(activity, queue, true)
-            }
+            replaceQueueIfUserConfirms()
+            NavigationHelper
+                .playOnPopupPlayer(activity, queue, true)
         }
     }
 
@@ -1269,10 +1277,13 @@ class VideoDetailFragment :
         ) {
             showExternalVideoPlaybackDialog()
         } else {
-            replaceQueueIfUserConfirms {
-                playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let { return@replaceQueueIfUserConfirms }
+            lifecycleScope.launch {
+                replaceQueueIfUserConfirms()
+                playerHolderStartServiceIfNull(playAfterConnect = autoPlayEnabled)?.let {
+                    return@launch
+                }
                 if (currentInfo == null) {
-                    return@replaceQueueIfUserConfirms
+                    return@launch
                 }
 
                 val queue = setupPlayQueueForIntent(false)
@@ -1299,7 +1310,7 @@ class VideoDetailFragment :
         openVideoPlayer(PlayerHelper.isStartMainPlayerFullscreenEnabled(requireContext()))
     }
 
-    private fun openNormalBackgroundPlayer(append: Boolean) {
+    private suspend fun openNormalBackgroundPlayer(append: Boolean) {
         // See UI changes while remote playQueue changes
         // TODO: starting the service here means our lifecycle is all screwed up
         playerHolderStartServiceIfNull(playAfterConnect = false)
@@ -1308,10 +1319,9 @@ class VideoDetailFragment :
         if (append) {
             NavigationHelper.enqueueOnPlayer(activity, queue, PlayerType.AUDIO)
         } else {
-            replaceQueueIfUserConfirms {
-                NavigationHelper
-                    .playOnBackgroundPlayer(activity, queue, true)
-            }
+            replaceQueueIfUserConfirms()
+            NavigationHelper
+                .playOnBackgroundPlayer(activity, queue, true)
         }
     }
 
@@ -2304,29 +2314,31 @@ class VideoDetailFragment :
         return item
     }
 
-    private fun replaceQueueIfUserConfirms(onAllow: () -> Unit) {
-        ifPlayerElse({
-            val activeQueue = player.playQueue
-            // Player will have STATE_IDLE when a user pressed back button
-            if (PlayerHelper.isClearingQueueConfirmationRequired(activity) &&
-                !player.isStopped &&
-                activeQueue != null && !activeQueue.equalStreams(playQueue)
-            ) {
-                AlertDialog.Builder(this@VideoDetailFragment.activity)
-                    .setTitle(R.string.clear_queue_confirmation_description)
-                    .setNegativeButton(R.string.cancel, null)
-                    .setPositiveButton(
-                        R.string.ok,
-                        DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-                            onAllow()
-                            dialog!!.dismiss()
-                        }
-                    )
-                    .show()
+    private suspend fun replaceQueueIfUserConfirms() {
+        suspendCoroutine<Unit> { cont ->
+            ifPlayerElse({
+                val activeQueue = player.playQueue
+                // Player will have STATE_IDLE when a user pressed back button
+                if (PlayerHelper.isClearingQueueConfirmationRequired(activity) &&
+                    !player.isStopped &&
+                    activeQueue != null && !activeQueue.equalStreams(playQueue)
+                ) {
+                    AlertDialog.Builder(this@VideoDetailFragment.activity)
+                        .setTitle(R.string.clear_queue_confirmation_description)
+                        .setNegativeButton(R.string.cancel, null)
+                        .setPositiveButton(
+                            R.string.ok,
+                            DialogInterface.OnClickListener { dialog: DialogInterface, which: Int ->
+                                cont.resume(Unit)
+                                dialog.dismiss()
+                            }
+                        )
+                        .show()
+                }
+                cont.resume(Unit)
+            }) {
+                cont.resume(Unit)
             }
-            onAllow()
-        }) {
-            onAllow()
         }
     }
 
