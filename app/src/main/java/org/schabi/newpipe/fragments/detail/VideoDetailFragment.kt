@@ -133,7 +133,6 @@ import java.lang.StringBuilder
 import java.util.ArrayList
 import java.util.LinkedList
 import java.util.List
-import java.util.Objects
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import kotlin.coroutines.resume
@@ -400,7 +399,7 @@ class VideoDetailFragment :
         if (activity.isFinishing) {
             playQueue = null
             currentInfo = null
-            stack = LinkedList<StackItem>()
+            Stack.emptyStack()
         }
     }
 
@@ -839,7 +838,7 @@ class VideoDetailFragment :
         }
 
         // If we are in fullscreen mode just exit from it via first back press
-        if (ifPlayer(false) {
+        val wasFullscreen = ifPlayer(false) {
             if (isFullscreen) {
                 if (!DeviceUtils.isTablet(activity)) {
                     player.pause()
@@ -849,29 +848,26 @@ class VideoDetailFragment :
                 true
             } else false
         }
-        ) {
-            return true
-        }
+        if (wasFullscreen) { return true }
 
         // If we have something in history of played items we replay it here
-        if (ifPlayerAnd {
+        val hasPreviousItem = ifPlayerAnd {
             player.isVideoPlayerSelected &&
                 player.playQueue?.previous() == true
         }
-        ) {
+        if (hasPreviousItem) {
             return true // no code here, as previous() was used in the if
         }
 
         // That means that we are on the start of the stack,
-        if (stack.size <= 1) {
+        if (Stack.size < 2) {
             restoreDefaultOrientation()
             return false // let MainActivity handle the onBack (e.g. to minimize the mini player)
         }
 
-        // Remove top
-        stack.pop()
-        // Get stack item from the new top
-        setupFromHistoryItem(Objects.requireNonNull<StackItem?>(stack.peek()))
+        // we know there’s 2 or more elements
+        val newTop = Stack.popAndGetNewTop()!!
+        setupFromHistoryItem(newTop)
 
         return true
     }
@@ -1018,7 +1014,7 @@ class VideoDetailFragment :
                         handleResult(result)
                         showContent()
                         val addToBackStackB = when (addToBackStack) {
-                            AddToBackStack.OnlyIfStackEmpty -> stack.isEmpty()
+                            AddToBackStack.OnlyIfStackEmpty -> Stack.isEmpty()
                             AddToBackStack.Always -> true
                         }
                         if (addToBackStackB) {
@@ -1029,10 +1025,7 @@ class VideoDetailFragment :
                                 playQueue = pq
                             }
                             // only push on stack if previous item (if any) is not equal
-                            val firstInStack = stack.peek()
-                            if (firstInStack == null || !firstInStack.playQueue.equalStreams(pq)) {
-                                stack.push(StackItem(serviceId, url, title, pq))
-                            }
+                            Stack.pushIfEmptyOrQueueDifferent(pq, StackItem(serviceId, url, title, pq))
                         }
 
                         if (isAutoplayEnabled()) {
@@ -1957,21 +1950,10 @@ class VideoDetailFragment :
             // It will allow to have live instance of PlayQueue with actual information about
             // deleted/added items inside Channel/Playlist queue and makes possible to have
             // a history of played items
-            val stackPeek = stack.peek()
-            if (stackPeek != null && !stackPeek.playQueue.equalStreams(queue)) {
-                val playQueueItem = queue.currentItem
-                if (playQueueItem != null) {
-                    stack.push(
-                        StackItem(
-                            playQueueItem.serviceId, playQueueItem.url,
-                            playQueueItem.title, queue
-                        )
-                    )
-                    return
-                } // else continue below
-            }
+            val wasUpdated = Stack.pushCurrentItemIfNotEmptyAndQueueDifferent(queue)
+            if (wasUpdated) { return }
 
-            findQueueInStack(queue)?.run {
+            Stack.findQueueInStack(queue)?.run {
                 // On every MainPlayer service's destroy() playQueue gets disposed and
                 // no longer able to track progress. That's why we update our cached disposed
                 // queue with the new one that is active and have the same history.
@@ -2007,7 +1989,7 @@ class VideoDetailFragment :
         }
 
         override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue) {
-            findQueueInStack(queue)?.run {
+            Stack.findQueueInStack(queue)?.run {
                 // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
                 // every new played stream gives new title and url.
                 // StackItem contains information about first played stream. Let's update it here
@@ -2296,23 +2278,6 @@ class VideoDetailFragment :
         return url == null
     }
 
-    internal class StackItem(
-        val serviceId: Int,
-        var url: String?,
-        var title: String?,
-        var playQueue: PlayQueue
-    ) : Serializable {
-        override fun toString(): String {
-            return serviceId.toString() + ":" + url + " > " + title
-        }
-    }
-
-    private fun findQueueInStack(queue: PlayQueue): StackItem? {
-        return stack.findLast {
-            it.playQueue.equalStreams(queue) == true
-        }
-    }
-
     private suspend fun replaceQueueIfUserConfirms() {
         suspendCoroutine<Unit> { cont ->
             ifPlayerElse({
@@ -2460,7 +2425,7 @@ class VideoDetailFragment :
      * */
     private fun cleanUp() {
         // New beginning
-        stack.clear()
+        Stack.emptyStack()
         if (currentWorker != null) {
             currentWorker!!.dispose()
         }
@@ -2664,6 +2629,81 @@ class VideoDetailFragment :
         }
     }
 
+    /*//////////////////////////////////////////////////////////////////////////
+    // OwnStack
+    ////////////////////////////////////////////////////////////////////////// */
+
+    internal class StackItem(
+        val serviceId: Int,
+        var url: String?,
+        var title: String?,
+        var playQueue: PlayQueue
+    ) : Serializable {
+        override fun toString(): String {
+            return serviceId.toString() + ":" + url + " > " + title
+        }
+    }
+
+    /**
+     * Singleton stack object that contains the "navigation history".
+     */
+    private object Stack {
+        private var stack: LinkedList<StackItem> = LinkedList<StackItem>()
+
+        fun emptyStack() {
+            stack = LinkedList<StackItem>()
+        }
+
+        val size by stack::size
+
+        /** Pops the top item from the stack and returns the new first item, if any. */
+        fun popAndGetNewTop(): StackItem? {
+            if (stack.isNotEmpty()) {
+                stack.pop()
+            }
+            return stack.peek()
+        }
+
+        /** Push to the stack if the stack is empty or the new queue is different from the previous top. */
+        fun pushIfEmptyOrQueueDifferent(playQueue: PlayQueue, stackItem: StackItem) {
+            val top: StackItem? = stack.peek()
+            if (top == null || !top.playQueue.equalStreams(playQueue)) {
+                stack.push(stackItem)
+            }
+        }
+
+        /** Push the current play item of the given queue to the stack, if
+         * - The stack is not empty and
+         * - there is a current play item and
+         * - the new queue is not equal to the previous one
+         *
+         * @return whether the stack was pushed.
+         */
+        fun pushCurrentItemIfNotEmptyAndQueueDifferent(playQueue: PlayQueue): Boolean {
+            val top: StackItem? = stack.peek()
+            if (top != null && !top.playQueue.equalStreams(playQueue)) {
+                val playQueueItem = playQueue.currentItem
+                if (playQueueItem != null) {
+                    stack.push(
+                        StackItem(
+                            playQueueItem.serviceId, playQueueItem.url,
+                            playQueueItem.title, playQueue
+                        )
+                    )
+                    return true
+                }
+            }
+            return false
+        }
+        fun isEmpty(): Boolean = stack.isEmpty()
+
+        fun findQueueInStack(queue: PlayQueue): StackItem? {
+            return stack.findLast {
+                it.playQueue.equalStreams(queue) == true
+            }
+        }
+    }
+
     companion object {
         const val KEY_SWITCHING_PLAYERS: String = "switching_players"
 
@@ -2709,14 +2749,5 @@ class VideoDetailFragment :
             instance.updateBottomSheetState(BottomSheetBehavior.STATE_COLLAPSED)
             return instance
         }
-
-        /*//////////////////////////////////////////////////////////////////////////
-    // OwnStack
-    ////////////////////////////////////////////////////////////////////////// */
-        /**
-         * Stack that contains the "navigation history".<br></br>
-         * The peek is the current video.
-         */
-        private var stack = LinkedList<StackItem>()
     }
 }
