@@ -19,7 +19,7 @@ public final class SinglePlayQueue extends PlayQueue {
 
     public SinglePlayQueue(final StreamInfo info, final long startPosition) {
         super(0, List.of(new PlayQueueItem(info)));
-        getItem().setRecoveryPosition(startPosition);
+        getCurrentItem().setRecoveryPosition(startPosition);
     }
 
     public SinglePlayQueue(@NonNull final List<StreamInfoItem> items, final int index) {

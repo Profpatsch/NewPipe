@@ -139,7 +139,7 @@ public final class NavigationHelper {
     /* PLAY */
     public static void playOnMainPlayer(final AppCompatActivity activity,
                                         @NonNull final PlayQueue playQueue) {
-        final PlayQueueItem item = playQueue.getItem();
+        final PlayQueueItem item = playQueue.getCurrentItem();
         if (item != null) {
             openVideoDetailFragment(activity, activity.getSupportFragmentManager(),
                     item.getServiceId(), item.getUrl(), item.getTitle(), playQueue,
@@ -150,7 +150,7 @@ public final class NavigationHelper {
     public static void playOnMainPlayer(final Context context,
                                         @NonNull final PlayQueue playQueue,
                                         final boolean switchingPlayers) {
-        final PlayQueueItem item = playQueue.getItem();
+        final PlayQueueItem item = playQueue.getCurrentItem();
         if (item != null) {
             openVideoDetail(context,
                     item.getServiceId(), item.getUrl(), item.getTitle(), playQueue,

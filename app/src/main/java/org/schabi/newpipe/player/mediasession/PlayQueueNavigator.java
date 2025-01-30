@@ -68,7 +68,7 @@ public class PlayQueueNavigator implements MediaSessionConnector.QueueNavigator 
     @Override
     public long getActiveQueueItemId(
             @Nullable final com.google.android.exoplayer2.Player exoPlayer) {
-        return Optional.ofNullable(player.getPlayQueue()).map(PlayQueue::getIndex).orElse(-1);
+        return Optional.ofNullable(player.getPlayQueue()).map(PlayQueue::getCurrentIndex).orElse(-1);
     }
 
     @Override
@@ -80,7 +80,7 @@ public class PlayQueueNavigator implements MediaSessionConnector.QueueNavigator 
     public void onSkipToQueueItem(@NonNull final com.google.android.exoplayer2.Player exoPlayer,
                                   final long id) {
         if (player.getPlayQueue() != null) {
-            player.selectQueueItem(player.getPlayQueue().getItem((int) id));
+            player.selectQueueItem(player.getPlayQueue().getItemAtIndex((int) id));
         }
     }
 
@@ -100,7 +100,7 @@ public class PlayQueueNavigator implements MediaSessionConnector.QueueNavigator 
         }
 
         // Yes this is almost a copypasta, got a problem with that? =\
-        final int currentWindowIndex = player.getPlayQueue().getIndex();
+        final int currentWindowIndex = player.getPlayQueue().getCurrentIndex();
         final int queueSize = Math.min(MAX_QUEUE_SIZE, windowCount);
         final int startIndex = Util.constrainValue(currentWindowIndex - ((queueSize - 1) / 2), 0,
                 windowCount - queueSize);
@@ -117,7 +117,7 @@ public class PlayQueueNavigator implements MediaSessionConnector.QueueNavigator 
         if (player.getPlayQueue() == null) {
             return null;
         }
-        final PlayQueueItem item = player.getPlayQueue().getItem(index);
+        final PlayQueueItem item = player.getPlayQueue().getItemAtIndex(index);
         if (item == null) {
             return null;
         }

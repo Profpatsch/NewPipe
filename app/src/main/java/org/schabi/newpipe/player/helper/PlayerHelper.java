@@ -422,7 +422,7 @@ public final class PlayerHelper {
     private static SinglePlayQueue getAutoQueuedSinglePlayQueue(
             final StreamInfoItem streamInfoItem) {
         final SinglePlayQueue singlePlayQueue = new SinglePlayQueue(streamInfoItem);
-        Objects.requireNonNull(singlePlayQueue.getItem()).setAutoQueued(true);
+        Objects.requireNonNull(singlePlayQueue.getCurrentItem()).setAutoQueued(true);
         return singlePlayQueue;
     }
 

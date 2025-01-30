@@ -508,8 +508,8 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
     private void showHideKodiButton() {
         // show kodi button if it supports the current service and it is enabled in settings
         @Nullable final PlayQueue playQueue = player.getPlayQueue();
-        binding.playWithKodi.setVisibility(playQueue != null && playQueue.getItem() != null
-                && KoreUtils.shouldShowPlayWithKodi(context, playQueue.getItem().getServiceId())
+        binding.playWithKodi.setVisibility(playQueue != null && playQueue.getCurrentItem() != null
+                && KoreUtils.shouldShowPlayWithKodi(context, playQueue.getCurrentItem().getServiceId())
                 ? View.VISIBLE : View.GONE);
     }
     //endregion
@@ -619,7 +619,7 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
 
         @Nullable final PlayQueue playQueue = player.getPlayQueue();
         if (playQueue != null) {
-            binding.itemsList.scrollToPosition(playQueue.getIndex());
+            binding.itemsList.scrollToPosition(playQueue.getCurrentIndex());
         }
 
         updateQueueTime((int) player.getExoPlayer().getCurrentPosition());
@@ -813,7 +813,7 @@ public final class MainPlayerUi extends VideoPlayerUi implements View.OnLayoutCh
             return;
         }
 
-        final int currentStream = playQueue.getIndex();
+        final int currentStream = playQueue.getCurrentIndex();
         int before = 0;
         int after = 0;
 

@@ -358,7 +358,7 @@ public final class Player implements PlaybackListener, Listener {
 
             // Resolve enqueue next intents
         } else if (intent.getBooleanExtra(ENQUEUE_NEXT, false) && playQueue != null) {
-            final int currentIndex = playQueue.getIndex();
+            final int currentIndex = playQueue.getCurrentIndex();
             playQueue.append(newQueue.getStreams());
             playQueue.move(playQueue.size() - 1, currentIndex + 1);
             return;
@@ -386,17 +386,17 @@ public final class Player implements PlaybackListener, Listener {
          * */
         // seek to timestamp if stream is already playing
         if (!exoPlayerIsNull()
-                && newQueue.size() == 1 && newQueue.getItem() != null
-                && playQueue != null && playQueue.size() == 1 && playQueue.getItem() != null
-                && newQueue.getItem().getUrl().equals(playQueue.getItem().getUrl())
-                && newQueue.getItem().getRecoveryPosition() != PlayQueueItem.RECOVERY_UNSET) {
+                && newQueue.size() == 1 && newQueue.getCurrentItem() != null
+                && playQueue != null && playQueue.size() == 1 && playQueue.getCurrentItem() != null
+                && newQueue.getCurrentItem().getUrl().equals(playQueue.getCurrentItem().getUrl())
+                && newQueue.getCurrentItem().getRecoveryPosition() != PlayQueueItem.RECOVERY_UNSET) {
             // Player can have state = IDLE when playback is stopped or failed
             // and we should retry in this case
             if (simpleExoPlayer.getPlaybackState()
                     == com.google.android.exoplayer2.Player.STATE_IDLE) {
                 simpleExoPlayer.prepare();
             }
-            simpleExoPlayer.seekTo(playQueue.getIndex(), newQueue.getItem().getRecoveryPosition());
+            simpleExoPlayer.seekTo(playQueue.getCurrentIndex(), newQueue.getCurrentItem().getRecoveryPosition());
             simpleExoPlayer.setPlayWhenReady(playWhenReady);
 
         } else if (!exoPlayerIsNull()
@@ -416,18 +416,18 @@ public final class Player implements PlaybackListener, Listener {
                 && DependentPreferenceHelper.getResumePlaybackEnabled(context)
                 && !samePlayQueue
                 && !newQueue.isEmpty()
-                && newQueue.getItem() != null
-                && newQueue.getItem().getRecoveryPosition() == PlayQueueItem.RECOVERY_UNSET) {
-            databaseUpdateDisposable.add(recordManager.loadStreamState(newQueue.getItem())
+                && newQueue.getCurrentItem() != null
+                && newQueue.getCurrentItem().getRecoveryPosition() == PlayQueueItem.RECOVERY_UNSET) {
+            databaseUpdateDisposable.add(recordManager.loadStreamState(newQueue.getCurrentItem())
                     .observeOn(AndroidSchedulers.mainThread())
                     // Do not place initPlayback() in doFinally() because
                     // it restarts playback after destroy()
                     //.doFinally()
                     .subscribe(
                             state -> {
-                                if (!state.isFinished(newQueue.getItem().getDuration())) {
+                                if (!state.isFinished(newQueue.getCurrentItem().getDuration())) {
                                     // resume playback only if the stream was not played to the end
-                                    newQueue.setRecovery(newQueue.getIndex(),
+                                    newQueue.setRecovery(newQueue.getCurrentIndex(),
                                             state.getProgressMillis());
                                 }
                                 initPlayback(newQueue, repeatMode, playbackSpeed, playbackPitch,
@@ -611,7 +611,7 @@ public final class Player implements PlaybackListener, Listener {
             return;
         }
 
-        final int queuePos = playQueue.getIndex();
+        final int queuePos = playQueue.getCurrentIndex();
         final long windowPos = simpleExoPlayer.getCurrentPosition();
         final long duration = simpleExoPlayer.getDuration();
 
@@ -1136,7 +1136,7 @@ public final class Player implements PlaybackListener, Listener {
 
         UIs.call(PlayerUi::onCompleted);
 
-        if (playQueue.getIndex() < playQueue.size() - 1) {
+        if (playQueue.getCurrentIndex() < playQueue.size() - 1) {
             playQueue.offsetIndex(+1);
         }
         if (isProgressLoopRunning()) {
@@ -1332,7 +1332,7 @@ public final class Player implements PlaybackListener, Listener {
             case DISCONTINUITY_REASON_REMOVE:
                 // When player is in single repeat mode and a period transition occurs,
                 // we need to register a view count here since no metadata has changed
-                if (getRepeatMode() == REPEAT_MODE_ONE && newIndex == playQueue.getIndex()) {
+                if (getRepeatMode() == REPEAT_MODE_ONE && newIndex == playQueue.getCurrentIndex()) {
                     registerStreamViewed();
                     break;
                 }
@@ -1346,7 +1346,7 @@ public final class Player implements PlaybackListener, Listener {
             case DISCONTINUITY_REASON_SEEK_ADJUSTMENT:
             case DISCONTINUITY_REASON_INTERNAL:
                 // Player index may be invalid when playback is blocked
-                if (getCurrentState() != STATE_BLOCKED && newIndex != playQueue.getIndex()) {
+                if (getCurrentState() != STATE_BLOCKED && newIndex != playQueue.getCurrentIndex()) {
                     saveStreamProgressStateCompleted(); // current stream has ended
                     playQueue.setIndex(newIndex);
                 }
@@ -1540,11 +1540,11 @@ public final class Player implements PlaybackListener, Listener {
 
         currentItem = item;
 
-        if (playQueueIndex != playQueue.getIndex()) {
+        if (playQueueIndex != playQueue.getCurrentIndex()) {
             // wrong window (this should be impossible, as this method is called with
             // `item=playQueue.getItem()`, so the index of that item must be equal to `getIndex()`)
             Log.e(TAG, "Playback - Play Queue may be not in sync: item index=["
-                    + playQueueIndex + "], " + "queue index=[" + playQueue.getIndex() + "]");
+                    + playQueueIndex + "], " + "queue index=[" + playQueue.getCurrentIndex() + "]");
 
         } else if ((playlistSize > 0 && playQueueIndex >= playlistSize) || playQueueIndex < 0) {
             // the queue and the player's timeline are not in sync, since the play queue index
@@ -1620,7 +1620,7 @@ public final class Player implements PlaybackListener, Listener {
         }
 
         if (currentState == STATE_COMPLETED) {
-            if (playQueue.getIndex() == 0) {
+            if (playQueue.getCurrentIndex() == 0) {
                 seekToDefault();
             } else {
                 playQueue.setIndex(0);
@@ -1670,7 +1670,7 @@ public final class Player implements PlaybackListener, Listener {
          * restart current track. Also restart the track if the current track
          * is the first in a queue.*/
         if (simpleExoPlayer.getCurrentPosition() > PLAY_PREV_ACTIVATION_LIMIT_MILLIS
-                || playQueue.getIndex() == 0) {
+                || playQueue.getCurrentIndex() == 0) {
             seekToDefault();
             playQueue.offsetIndex(0);
         } else {
@@ -1746,7 +1746,7 @@ public final class Player implements PlaybackListener, Listener {
 
     public void saveStreamProgressState() {
         if (exoPlayerIsNull() || currentMetadata == null || playQueue == null
-                || playQueue.getIndex() != simpleExoPlayer.getCurrentMediaItemIndex()) {
+                || playQueue.getCurrentIndex() != simpleExoPlayer.getCurrentMediaItemIndex()) {
             // Make sure play queue and current window index are equal, to prevent saving state for
             // the wrong stream on discontinuity (e.g. when the stream just changed but the
             // playQueue index and currentMetadata still haven't updated)
@@ -1754,7 +1754,7 @@ public final class Player implements PlaybackListener, Listener {
         }
         // Save current position. It will help to restore this position once a user
         // wants to play prev or next stream from the queue
-        playQueue.setRecovery(playQueue.getIndex(), simpleExoPlayer.getContentPosition());
+        playQueue.setRecovery(playQueue.getCurrentIndex(), simpleExoPlayer.getContentPosition());
         saveStreamProgressState(simpleExoPlayer.getCurrentPosition());
     }
 
@@ -1837,7 +1837,7 @@ public final class Player implements PlaybackListener, Listener {
     //region Play queue, segments and streams
 
     private void maybeAutoQueueNextStream(@NonNull final StreamInfo info) {
-        if (playQueue == null || playQueue.getIndex() != playQueue.size() - 1
+        if (playQueue == null || playQueue.getCurrentIndex() != playQueue.size() - 1
                 || getRepeatMode() != REPEAT_MODE_OFF
                 || !PlayerHelper.isAutoQueueEnabled(context)) {
             return;
@@ -1860,7 +1860,7 @@ public final class Player implements PlaybackListener, Listener {
             return;
         }
 
-        if (playQueue.getIndex() == index && simpleExoPlayer.getCurrentMediaItemIndex() == index) {
+        if (playQueue.getCurrentIndex() == index && simpleExoPlayer.getCurrentMediaItemIndex() == index) {
             seekToDefault();
         } else {
             saveStreamProgressState();

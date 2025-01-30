@@ -61,16 +61,16 @@ public class PlayQueueTest {
         @Test
         public void negative() {
             nonEmptyQueue.setIndex(-5);
-            assertEquals(0, nonEmptyQueue.getIndex());
+            assertEquals(0, nonEmptyQueue.getCurrentIndex());
 
             emptyQueue.setIndex(-5);
-            assertEquals(0, nonEmptyQueue.getIndex());
+            assertEquals(0, nonEmptyQueue.getCurrentIndex());
         }
 
         @Test
         public void inBounds() {
             nonEmptyQueue.setIndex(2);
-            assertEquals(2, nonEmptyQueue.getIndex());
+            assertEquals(2, nonEmptyQueue.getCurrentIndex());
 
             // emptyQueue not tested because 0 isn't technically inBounds
         }
@@ -79,36 +79,36 @@ public class PlayQueueTest {
         public void outOfBoundIsComplete() {
             doReturn(true).when(nonEmptyQueue).isComplete();
             nonEmptyQueue.setIndex(7);
-            assertEquals(2, nonEmptyQueue.getIndex());
+            assertEquals(2, nonEmptyQueue.getCurrentIndex());
 
             doReturn(true).when(emptyQueue).isComplete();
             emptyQueue.setIndex(2);
-            assertEquals(0, emptyQueue.getIndex());
+            assertEquals(0, emptyQueue.getCurrentIndex());
         }
 
         @Test
         public void outOfBoundsNotComplete() {
             doReturn(false).when(nonEmptyQueue).isComplete();
             nonEmptyQueue.setIndex(7);
-            assertEquals(SIZE - 1, nonEmptyQueue.getIndex());
+            assertEquals(SIZE - 1, nonEmptyQueue.getCurrentIndex());
 
             doReturn(false).when(emptyQueue).isComplete();
             emptyQueue.setIndex(2);
-            assertEquals(0, emptyQueue.getIndex());
+            assertEquals(0, emptyQueue.getCurrentIndex());
         }
 
         @Test
         public void indexZero() {
             nonEmptyQueue.setIndex(0);
-            assertEquals(0, nonEmptyQueue.getIndex());
+            assertEquals(0, nonEmptyQueue.getCurrentIndex());
 
             doReturn(true).when(emptyQueue).isComplete();
             emptyQueue.setIndex(0);
-            assertEquals(0, emptyQueue.getIndex());
+            assertEquals(0, emptyQueue.getCurrentIndex());
 
             doReturn(false).when(emptyQueue).isComplete();
             emptyQueue.setIndex(0);
-            assertEquals(0, emptyQueue.getIndex());
+            assertEquals(0, emptyQueue.getCurrentIndex());
         }
 
         @Test
@@ -118,7 +118,7 @@ public class PlayQueueTest {
 
             nonEmptyQueue.setIndex(3);
             assertTrue(nonEmptyQueue.previous());
-            assertEquals("URL_0", Objects.requireNonNull(nonEmptyQueue.getItem()).getUrl());
+            assertEquals("URL_0", Objects.requireNonNull(nonEmptyQueue.getCurrentItem()).getUrl());
         }
     }
 
@@ -139,14 +139,14 @@ public class PlayQueueTest {
 
         @Test
         public void inBounds() {
-            assertEquals("TARGET_URL", Objects.requireNonNull(queue.getItem(3)).getUrl());
-            assertEquals("OTHER_URL", Objects.requireNonNull(queue.getItem(1)).getUrl());
+            assertEquals("TARGET_URL", Objects.requireNonNull(queue.getItemAtIndex(3)).getUrl());
+            assertEquals("OTHER_URL", Objects.requireNonNull(queue.getItemAtIndex(1)).getUrl());
         }
 
         @Test
         public void outOfBounds() {
-            assertNull(queue.getItem(-1));
-            assertNull(queue.getItem(5));
+            assertNull(queue.getItemAtIndex(-1));
+            assertNull(queue.getItemAtIndex(5));
         }
 
         @Test
@@ -155,7 +155,7 @@ public class PlayQueueTest {
             final PlayQueue playQueue = makePlayQueue(0, List.of(item));
 
             // make sure that items are not cloned when added to the queue
-            assertSame(playQueue.getItem(), item);
+            assertSame(playQueue.getCurrentItem(), item);
         }
     }
 

@@ -346,7 +346,7 @@ public final class PlayQueueActivity extends AppCompatActivity
             return;
         }
 
-        final int currentPlayingIndex = player.getPlayQueue().getIndex();
+        final int currentPlayingIndex = player.getPlayQueue().getCurrentIndex();
         final int currentVisibleIndex;
         if (queueControlBinding.playQueue.getLayoutManager() instanceof LinearLayoutManager) {
             final LinearLayoutManager layout =

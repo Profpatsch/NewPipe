@@ -734,8 +734,8 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
             return;
         }
 
-        final boolean showPrev = playQueue.getIndex() != 0;
-        final boolean showNext = playQueue.getIndex() + 1 != playQueue.getStreams().size();
+        final boolean showPrev = playQueue.getCurrentIndex() != 0;
+        final boolean showNext = playQueue.getCurrentIndex() + 1 != playQueue.getStreams().size();
 
         binding.playPreviousButton.setVisibility(showPrev ? View.VISIBLE : View.INVISIBLE);
         binding.playPreviousButton.setAlpha(showPrev ? 1.0f : 0.0f);
@@ -911,14 +911,14 @@ public abstract class VideoPlayerUi extends PlayerUi implements SeekBar.OnSeekBa
             return;
         }
 
-        if (!show || playQueue.getIndex() > 0) {
+        if (!show || playQueue.getCurrentIndex() > 0) {
             animate(
                     binding.playPreviousButton,
                     show,
                     duration,
                     AnimationType.SCALE_AND_ALPHA);
         }
-        if (!show || playQueue.getIndex() + 1 < playQueue.getStreams().size()) {
+        if (!show || playQueue.getCurrentIndex() + 1 < playQueue.getStreams().size()) {
             animate(
                     binding.playNextButton,
                     show,

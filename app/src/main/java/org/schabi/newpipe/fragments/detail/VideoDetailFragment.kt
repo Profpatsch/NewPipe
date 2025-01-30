@@ -887,11 +887,11 @@ class VideoDetailFragment :
         startLoading(false)
 
         // Maybe an item was deleted in background activity
-        if (item.playQueue.item == null) {
+        if (item.playQueue.currentItem == null) {
             return
         }
 
-        val playQueueItem = item.playQueue.item
+        val playQueueItem = item.playQueue.currentItem
         // Update title, url, uploader from the last item in the stack (it's current now)
         if (playQueueItem != null && ifPlayerImplies { player.isStopped }) {
             overlay.updateOverlayData(
@@ -923,7 +923,7 @@ class VideoDetailFragment :
         newQueue: PlayQueue?
     ) {
         ifPlayer {
-            val oldQueueUrl = playQueue?.item?.url
+            val oldQueueUrl = playQueue?.currentItem?.url
             if (
                 newQueue != null &&
                 oldQueueUrl != newUrl
@@ -1959,7 +1959,7 @@ class VideoDetailFragment :
             // a history of played items
             val stackPeek = stack.peek()
             if (stackPeek != null && !stackPeek.playQueue.equalStreams(queue)) {
-                val playQueueItem = queue.item
+                val playQueueItem = queue.currentItem
                 if (playQueueItem != null) {
                     stack.push(
                         StackItem(
@@ -2000,7 +2000,7 @@ class VideoDetailFragment :
             }
 
             ifPlayer {
-                if (player.playQueue!!.item!!.url == url) {
+                if (player.playQueue!!.currentItem!!.url == url) {
                     updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
                 }
             }

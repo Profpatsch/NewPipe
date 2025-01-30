@@ -72,7 +72,7 @@ object PlayerHolder {
     fun isPlayQueueReady(): PlayQueueInfo? {
         return player?.playQueue?.let { q ->
             PlayQueueInfo(
-                isInMiddleOfQueue = q.index < (q.size() - 1)
+                isInMiddleOfQueue = q.currentIndex < (q.size() - 1)
             )
         }
     }

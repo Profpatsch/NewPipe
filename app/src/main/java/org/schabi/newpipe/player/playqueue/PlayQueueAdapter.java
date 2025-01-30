@@ -209,7 +209,7 @@ public class PlayQueueAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                     .buildStreamInfoItem(itemHolder, playQueue.getStreams().get(position));
 
             // Check if the current item should be selected/highlighted
-            final boolean isSelected = playQueue.getIndex() == position;
+            final boolean isSelected = playQueue.getCurrentIndex() == position;
             itemHolder.itemView.setSelected(isSelected);
         } else if (holder instanceof HFHolder && position == playQueue.getStreams().size()
                 && footer != null && showFooter) {

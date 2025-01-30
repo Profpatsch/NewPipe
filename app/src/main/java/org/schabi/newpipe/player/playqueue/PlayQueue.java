@@ -114,7 +114,7 @@ public abstract class PlayQueue implements Serializable {
     /**
      * @return the current index that should be played
      */
-    public int getIndex() {
+    public int getCurrentIndex() {
         return queueIndex.get();
     }
 
@@ -130,7 +130,7 @@ public abstract class PlayQueue implements Serializable {
      * @param index the index to be set
      */
     public synchronized void setIndex(final int index) {
-        final int oldIndex = getIndex();
+        final int oldIndex = getCurrentIndex();
 
         final int newIndex;
 
@@ -169,8 +169,8 @@ public abstract class PlayQueue implements Serializable {
      * @return the current item that should be played, or null if the queue is empty
      */
     @Nullable
-    public PlayQueueItem getItem() {
-        return getItem(getIndex());
+    public PlayQueueItem getCurrentItem() {
+        return getItemAtIndex(getCurrentIndex());
     }
 
     /**
@@ -178,7 +178,7 @@ public abstract class PlayQueue implements Serializable {
      * @return the item at the given index, or null if the index is out of bounds
      */
     @Nullable
-    public PlayQueueItem getItem(final int index) {
+    public PlayQueueItem getItemAtIndex(final int index) {
         if (index < 0 || index >= streams.size()) {
             return null;
         }
@@ -253,7 +253,7 @@ public abstract class PlayQueue implements Serializable {
      * @param offset the offset relative to the current index
      */
     public synchronized void offsetIndex(final int offset) {
-        setIndex(getIndex() + offset);
+        setIndex(getCurrentIndex() + offset);
     }
 
     /**
@@ -308,7 +308,7 @@ public abstract class PlayQueue implements Serializable {
             return;
         }
         removeInternal(index);
-        broadcast(new RemoveEvent(index, getIndex()));
+        broadcast(new RemoveEvent(index, getCurrentIndex()));
     }
 
     /**
@@ -319,12 +319,12 @@ public abstract class PlayQueue implements Serializable {
      * </p>
      */
     public synchronized void error() {
-        final int oldIndex = getIndex();
+        final int oldIndex = getCurrentIndex();
         queueIndex.incrementAndGet();
         if (streams.size() > queueIndex.get()) {
             history.add(streams.get(queueIndex.get()));
         }
-        broadcast(new ErrorEvent(oldIndex, getIndex()));
+        broadcast(new ErrorEvent(oldIndex, getCurrentIndex()));
     }
 
     private synchronized void removeInternal(final int removeIndex) {
@@ -342,7 +342,7 @@ public abstract class PlayQueue implements Serializable {
         }
 
         if (backup != null) {
-            backup.remove(getItem(removeIndex));
+            backup.remove(getItemAtIndex(removeIndex));
         }
 
         history.remove(streams.remove(removeIndex));
@@ -372,7 +372,7 @@ public abstract class PlayQueue implements Serializable {
             return;
         }
 
-        final int current = getIndex();
+        final int current = getCurrentIndex();
         if (source == current) {
             queueIndex.set(target);
         } else if (source < current && target >= current) {
@@ -443,8 +443,8 @@ public abstract class PlayQueue implements Serializable {
             return;
         }
 
-        final int originalIndex = getIndex();
-        final PlayQueueItem currentItem = getItem();
+        final int originalIndex = getCurrentIndex();
+        final PlayQueueItem currentItem = getCurrentItem();
 
         Collections.shuffle(streams);
 
@@ -472,8 +472,8 @@ public abstract class PlayQueue implements Serializable {
         if (backup == null) {
             return;
         }
-        final int originIndex = getIndex();
-        final PlayQueueItem current = getItem();
+        final int originIndex = getCurrentIndex();
+        final PlayQueueItem current = getCurrentItem();
 
         streams = backup;
         backup = null;
@@ -540,7 +540,7 @@ public abstract class PlayQueue implements Serializable {
     public boolean equalStreamsAndIndex(@Nullable final PlayQueue other) {
         if (equalStreams(other)) {
             //noinspection ConstantConditions
-            return other.getIndex() == getIndex(); //NOSONAR: other is not null
+            return other.getCurrentIndex() == getCurrentIndex(); //NOSONAR: other is not null
         }
         return false;
     }

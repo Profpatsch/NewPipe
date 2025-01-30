@@ -284,7 +284,7 @@ public class MediaSourceManager {
     //////////////////////////////////////////////////////////////////////////*/
 
     private boolean isPlayQueueReady() {
-        final boolean isWindowLoaded = playQueue.size() - playQueue.getIndex() > WINDOW_SIZE;
+        final boolean isWindowLoaded = playQueue.size() - playQueue.getCurrentIndex() > WINDOW_SIZE;
         return playQueue.isComplete() || isWindowLoaded;
     }
 
@@ -293,8 +293,8 @@ public class MediaSourceManager {
             return false;
         }
 
-        final ManagedMediaSource mediaSource = playlist.get(playQueue.getIndex());
-        final PlayQueueItem playQueueItem = playQueue.getItem();
+        final ManagedMediaSource mediaSource = playlist.get(playQueue.getCurrentIndex());
+        final PlayQueueItem playQueueItem = playQueue.getCurrentItem();
         if (mediaSource == null || playQueueItem == null) {
             return false;
         }
@@ -340,7 +340,7 @@ public class MediaSourceManager {
             Log.d(TAG, "maybeSync() called.");
         }
 
-        final PlayQueueItem currentItem = playQueue.getItem();
+        final PlayQueueItem currentItem = playQueue.getCurrentItem();
         if (isBlocked.get() || currentItem == null) {
             return;
         }
@@ -495,7 +495,7 @@ public class MediaSourceManager {
         final int index = playQueue.indexOf(item);
         final ManagedMediaSource mediaSource = playlist.get(index);
         return mediaSource != null && mediaSource.shouldBeReplacedWith(item,
-                index != playQueue.getIndex());
+                index != playQueue.getCurrentIndex());
     }
 
     /**
@@ -510,8 +510,8 @@ public class MediaSourceManager {
      * is up-to-date.
      */
     private void maybeRenewCurrentIndex() {
-        final int currentIndex = playQueue.getIndex();
-        final PlayQueueItem currentItem = playQueue.getItem();
+        final int currentIndex = playQueue.getCurrentIndex();
+        final PlayQueueItem currentItem = playQueue.getCurrentItem();
         final ManagedMediaSource currentSource = playlist.get(currentIndex);
         if (currentItem == null || currentSource == null) {
             return;
@@ -533,7 +533,7 @@ public class MediaSourceManager {
         if (DEBUG) {
             Log.d(TAG, "MediaSource - maybeClearLoaders() called.");
         }
-        if (!loadingItems.contains(playQueue.getItem())
+        if (!loadingItems.contains(playQueue.getCurrentItem())
                 && loaderReactor.size() > MAXIMUM_LOADER_SIZE) {
             loaderReactor.clear();
             loadingItems.clear();
@@ -567,8 +567,8 @@ public class MediaSourceManager {
     @Nullable
     private static ItemsToLoad getItemsToLoad(@NonNull final PlayQueue playQueue) {
         // The current item has higher priority
-        final int currentIndex = playQueue.getIndex();
-        final PlayQueueItem currentItem = playQueue.getItem(currentIndex);
+        final int currentIndex = playQueue.getCurrentIndex();
+        final PlayQueueItem currentItem = playQueue.getItemAtIndex(currentIndex);
         if (currentItem == null) {
             return null;
         }
