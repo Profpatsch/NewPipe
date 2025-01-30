@@ -1020,11 +1020,12 @@ class VideoDetailFragment :
                             if (playQueue == null) {
                                 playQueue = pq
                             }
-                            if (stack.isEmpty() || !stack.peek()!!.playQueue
-                                .equalStreams(pq)
-                            ) {
+                            // only push on stack if previous item (if any) is not equal
+                            val firstInStack = stack.peek()
+                            if (firstInStack == null || !firstInStack.playQueue.equalStreams(pq)) {
                                 stack.push(StackItem(serviceId, url, title, pq))
                             }
+
                         }
 
                         if (isAutoplayEnabled()) {
