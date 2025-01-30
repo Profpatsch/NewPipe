@@ -389,18 +389,13 @@ class VideoDetailFragment :
         PreferenceManager.getDefaultSharedPreferences(activity)
             .unregisterOnSharedPreferenceChangeListener(preferenceChangeListener)
         activity.unregisterReceiver(broadcastReceiver)
-        activity.contentResolver.unregisterContentObserver(settingsContentObserver!!)
-
-        if (positionSubscriber != null) {
-            positionSubscriber!!.dispose()
-        }
-        if (currentWorker != null) {
-            currentWorker!!.dispose()
-        }
+        settingsContentObserver?.let { activity.contentResolver.unregisterContentObserver(it) }
+        positionSubscriber?.dispose()
+        currentWorker?.dispose()
         disposables.clear()
         positionSubscriber = null
         currentWorker = null
-        bottomSheetBehavior!!.removeBottomSheetCallback(bottomSheetCallback!!)
+        bottomSheetCallback?.let { bottomSheetBehavior?.removeBottomSheetCallback(it) }
 
         if (activity.isFinishing) {
             playQueue = null
