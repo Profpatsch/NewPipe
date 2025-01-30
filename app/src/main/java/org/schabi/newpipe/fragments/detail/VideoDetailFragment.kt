@@ -1337,11 +1337,16 @@ class VideoDetailFragment :
             if (!player.isVideoPlayerSelected) {
                 return@ifPlayer
             }
-
-            this@VideoDetailFragment.makeDefaultHeightForVideoPlaceholder()
-            this@VideoDetailFragment.ifPlayer {
-                firstVideoPlayerUi?.removeViewFromParent()
+            if (view == null) {
+                return@ifPlayer
             }
+
+            // make height for the video placeholder
+            binding.playerPlaceholder.layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT
+            binding.playerPlaceholder.requestLayout()
+
+            firstVideoPlayerUi?.removeViewFromParent()
+
             if (isAutoplayEnabled()) {
                 playerService.stopForImmediateReusing()
                 firstVideoPlayerUi?.setVisibilityGone()
@@ -1442,15 +1447,6 @@ class VideoDetailFragment :
                 }
             }
         )
-    }
-
-    private fun makeDefaultHeightForVideoPlaceholder() {
-        if (view == null) {
-            return
-        }
-
-        binding.playerPlaceholder.layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT
-        binding.playerPlaceholder.requestLayout()
     }
 
     private val preDrawListener: ViewTreeObserver.OnPreDrawListener =
