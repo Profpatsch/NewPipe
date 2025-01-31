@@ -1988,7 +1988,7 @@ class VideoDetailFragment :
             }
         }
 
-        override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue) {
+        override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue?) {
             Stack.findQueueInStack(queue)?.run {
                 // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
                 // every new played stream gives new title and url.
@@ -1999,7 +1999,7 @@ class VideoDetailFragment :
             // They are not equal when user watches something in popup while browsing in fragment and
             // then changes screen orientation. In that case the fragment will set itself as
             // a service listener and will receive initial call to onMetadataUpdate()
-            if (!queue.equalStreams(playQueue)) {
+            if (!queue!!.equalStreams(playQueue)) {
                 return
             }
 
@@ -2017,7 +2017,7 @@ class VideoDetailFragment :
             prepareAndHandleInfoIfNeededAfterDelay(info, true, 200)
         }
 
-        override fun onPlayerError(error: PlaybackException?, isCatchableException: Boolean) {
+        override fun onPlayerError(error: PlaybackException, isCatchableException: Boolean) {
             if (!isCatchableException) {
                 // Properly exit from fullscreen
                 toggleFullscreenIfInFullscreenMode()
@@ -2697,7 +2697,7 @@ class VideoDetailFragment :
         }
         fun isEmpty(): Boolean = stack.isEmpty()
 
-        fun findQueueInStack(queue: PlayQueue): StackItem? {
+        fun findQueueInStack(queue: PlayQueue?): StackItem? {
             return stack.findLast {
                 it.playQueue.equalStreams(queue) == true
             }

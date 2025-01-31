@@ -217,7 +217,7 @@ object PlayerHolder {
         }
 
         override fun onPlayerError(
-            error: PlaybackException?,
+            error: PlaybackException,
             isCatchableException: Boolean
         ) {
             listeners?.listener?.onPlayerError(error, isCatchableException)
@@ -227,7 +227,7 @@ object PlayerHolder {
             listeners?.listener?.hideSystemUiIfNeeded()
         }
 
-        override fun onQueueUpdate(queue: PlayQueue?) {
+        override fun onQueueUpdate(queue: PlayQueue) {
             listeners?.listener?.onQueueUpdate(queue)
         }
 
@@ -248,7 +248,7 @@ object PlayerHolder {
             listeners?.listener?.onProgressUpdate(currentProgress, duration, bufferPercent)
         }
 
-        override fun onMetadataUpdate(info: StreamInfo?, queue: PlayQueue?) {
+        override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue?) {
             listeners?.listener?.onMetadataUpdate(info, queue)
         }
 
