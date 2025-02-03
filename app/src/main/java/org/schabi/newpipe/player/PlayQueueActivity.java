@@ -19,6 +19,7 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -499,25 +500,23 @@ public final class PlayQueueActivity extends AppCompatActivity
     }
 
     @Override
-    public void onMetadataUpdate(final StreamInfo info, final PlayQueue queue) {
-        if (info != null) {
-            queueControlBinding.songName.setText(info.getName());
-            queueControlBinding.artistName.setText(info.getUploaderName());
+    public void onMetadataUpdate(@NonNull final StreamInfo info, @Nullable final PlayQueue queue) {
+        queueControlBinding.songName.setText(info.getName());
+        queueControlBinding.artistName.setText(info.getUploaderName());
 
-            queueControlBinding.endTime.setVisibility(View.GONE);
-            queueControlBinding.liveSync.setVisibility(View.GONE);
-            switch (info.getStreamType()) {
-                case LIVE_STREAM:
-                case AUDIO_LIVE_STREAM:
-                    queueControlBinding.liveSync.setVisibility(View.VISIBLE);
-                    break;
-                default:
-                    queueControlBinding.endTime.setVisibility(View.VISIBLE);
-                    break;
-            }
-
-            scrollToSelected();
+        queueControlBinding.endTime.setVisibility(View.GONE);
+        queueControlBinding.liveSync.setVisibility(View.GONE);
+        switch (info.getStreamType()) {
+            case LIVE_STREAM:
+            case AUDIO_LIVE_STREAM:
+                queueControlBinding.liveSync.setVisibility(View.VISIBLE);
+                break;
+            default:
+                queueControlBinding.endTime.setVisibility(View.VISIBLE);
+                break;
         }
+
+        scrollToSelected();
     }
 
     @Override

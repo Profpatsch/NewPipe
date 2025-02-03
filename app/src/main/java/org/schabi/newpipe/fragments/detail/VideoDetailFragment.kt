@@ -1993,17 +1993,19 @@ class VideoDetailFragment :
         }
 
         override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue?) {
-            Stack.findQueueInStack(queue)?.run {
-                // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
-                // every new played stream gives new title and url.
-                // StackItem contains information about first played stream. Let's update it here
-                title = info.name
-                url = info.url
+            queue?.let {
+                Stack.findQueueInStack(it)?.run {
+                    // When PlayQueue can have multiple streams (PlaylistPlayQueue or ChannelPlayQueue)
+                    // every new played stream gives new title and url.
+                    // StackItem contains information about first played stream. Let's update it here
+                    title = info.name
+                    url = info.url
+                }
             }
             // They are not equal when user watches something in popup while browsing in fragment and
             // then changes screen orientation. In that case the fragment will set itself as
             // a service listener and will receive initial call to onMetadataUpdate()
-            if (!queue!!.equalStreams(playQueue)) {
+            if (true == queue?.equalStreams(playQueue)) {
                 return
             }
 
@@ -2701,7 +2703,7 @@ class VideoDetailFragment :
         }
         fun isEmpty(): Boolean = stack.isEmpty()
 
-        fun findQueueInStack(queue: PlayQueue?): StackItem? {
+        fun findQueueInStack(queue: PlayQueue): StackItem? {
             return stack.findLast {
                 it.playQueue.equalStreams(queue) == true
             }
