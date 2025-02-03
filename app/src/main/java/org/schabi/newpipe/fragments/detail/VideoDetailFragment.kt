@@ -1986,7 +1986,7 @@ class VideoDetailFragment :
             }
 
             ifPlayer {
-                if (player.playQueue!!.currentItem!!.url == url) {
+                if (player.playQueue?.currentItem?.url == url) {
                     updatePlaybackProgress(currentProgress, duration)
                 }
             }
