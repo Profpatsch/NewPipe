@@ -890,12 +890,12 @@ public final class Player implements PlaybackListener, Listener {
     //////////////////////////////////////////////////////////////////////////*/
     //region Progress loop and updates
 
-    private void onUpdateProgress(final int currentProgress,
-                                  final int duration,
+    private void onUpdateProgress(final int currentProgressMillis,
+                                  final int durationMillis,
                                   final int bufferPercent) {
         if (isPrepared) {
-            UIs.call(ui -> ui.onUpdateProgress(currentProgress, duration, bufferPercent));
-            notifyProgressUpdateToListeners(currentProgress, duration, bufferPercent);
+            UIs.call(ui -> ui.onUpdateProgress(currentProgressMillis, durationMillis, bufferPercent));
+            notifyProgressUpdateToListeners(currentProgressMillis, durationMillis, bufferPercent);
         }
     }
 
@@ -2047,14 +2047,14 @@ public final class Player implements PlaybackListener, Listener {
         }
     }
 
-    private void notifyProgressUpdateToListeners(final int currentProgress,
-                                                 final int duration,
+    private void notifyProgressUpdateToListeners(final int currentProgressMillis,
+                                                 final int durationMillis,
                                                  final int bufferPercent) {
         if (fragmentListener != null) {
-            fragmentListener.onProgressUpdate(currentProgress, duration, bufferPercent);
+            fragmentListener.onProgressUpdate(currentProgressMillis, durationMillis, bufferPercent);
         }
         if (activityListener != null) {
-            activityListener.onProgressUpdate(currentProgress, duration, bufferPercent);
+            activityListener.onProgressUpdate(currentProgressMillis, durationMillis, bufferPercent);
         }
     }
 

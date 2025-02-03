@@ -241,11 +241,11 @@ object PlayerHolder {
         }
 
         override fun onProgressUpdate(
-            currentProgress: Int,
-            duration: Int,
+            currentProgressMillis: Int,
+            durationMillis: Int,
             bufferPercent: Int
         ) {
-            listeners?.listener?.onProgressUpdate(currentProgress, duration, bufferPercent)
+            listeners?.listener?.onProgressUpdate(currentProgressMillis, durationMillis, bufferPercent)
         }
 
         override fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue?) {

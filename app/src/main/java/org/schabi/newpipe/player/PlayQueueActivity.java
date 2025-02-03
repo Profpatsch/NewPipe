@@ -470,21 +470,21 @@ public final class PlayQueueActivity extends AppCompatActivity
     }
 
     @Override
-    public void onProgressUpdate(final int currentProgress, final int duration,
+    public void onProgressUpdate(final int currentProgressMillis, final int durationMillis,
                                  final int bufferPercent) {
         // Set buffer progress
         queueControlBinding.seekBar.setSecondaryProgress((int) (queueControlBinding.seekBar.getMax()
                 * ((float) bufferPercent / 100)));
 
         // Set Duration
-        queueControlBinding.seekBar.setMax(duration);
-        queueControlBinding.endTime.setText(Localization.getDurationString(duration / 1000));
+        queueControlBinding.seekBar.setMax(durationMillis);
+        queueControlBinding.endTime.setText(Localization.getDurationString(durationMillis / 1000));
 
         // Set current time if not seeking
         if (!seeking) {
-            queueControlBinding.seekBar.setProgress(currentProgress);
+            queueControlBinding.seekBar.setProgress(currentProgressMillis);
             queueControlBinding.currentTime.setText(Localization
-                    .getDurationString(currentProgress / 1000));
+                    .getDurationString(currentProgressMillis / 1000));
         }
 
         if (player != null) {

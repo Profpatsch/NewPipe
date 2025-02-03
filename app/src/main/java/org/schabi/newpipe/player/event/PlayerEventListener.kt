@@ -14,7 +14,8 @@ interface PlayerEventListener {
         parameters: PlaybackParameters?
     )
 
-    fun onProgressUpdate(currentProgress: Int, duration: Int, bufferPercent: Int)
+    fun onProgressUpdate(currentProgressMillis: Int, durationMillis: Int, bufferPercent: Int)
+
     fun onMetadataUpdate(info: StreamInfo, queue: PlayQueue?)
     fun onAudioTrackUpdate() {}
     fun onServiceStopped()

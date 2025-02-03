@@ -133,11 +133,13 @@ import java.lang.StringBuilder
 import java.util.ArrayList
 import java.util.LinkedList
 import java.util.List
-import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.max
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class VideoDetailFragment :
     BaseStateFragment<StreamInfo>(),
@@ -1891,7 +1893,7 @@ class VideoDetailFragment :
             .subscribe(
                 io.reactivex.rxjava3.functions.Consumer { state: StreamStateEntity? ->
                     updatePlaybackProgress(
-                        state!!.progressMillis, info.duration * 1000
+                        state!!.progressMillis.milliseconds, info.duration.seconds
                     )
                 },
                 io.reactivex.rxjava3.functions.Consumer { e: Throwable? -> },
@@ -1901,17 +1903,17 @@ class VideoDetailFragment :
             )
     }
 
-    private fun updatePlaybackProgress(progress: Long, duration: Long) {
+    private fun updatePlaybackProgress(progress: Duration, duration: Duration) {
         if (!DependentPreferenceHelper.getResumePlaybackEnabled(activity)) {
             return
         }
-        val progressSeconds = TimeUnit.MILLISECONDS.toSeconds(progress).toInt()
-        val durationSeconds = TimeUnit.MILLISECONDS.toSeconds(duration).toInt()
+        val progressSeconds = progress.inWholeSeconds
+        val durationSeconds = duration.inWholeSeconds
 
         videoDetailFragmentThumbnailStreamProgress.value =
             VideoStreamProgress(
                 percentage = progressSeconds.toFloat() / durationSeconds.toFloat(),
-                currentTime = Localization.getDurationString(progressSeconds.toLong())
+                currentTime = Localization.getDurationString(progressSeconds)
             )
     }
 
@@ -1972,10 +1974,12 @@ class VideoDetailFragment :
         }
 
         override fun onProgressUpdate(
-            currentProgress: Int,
-            duration: Int,
+            currentProgressMillis: Int,
+            durationMillis: Int,
             bufferPercent: Int
         ) {
+            val currentProgress = currentProgressMillis.milliseconds
+            val duration = durationMillis.milliseconds
             // Progress updates every second even if media is paused. It's useless until playing
             if (ifPlayerImplies { !player.isPlaying } || playQueue == null) {
                 return
@@ -1983,7 +1987,7 @@ class VideoDetailFragment :
 
             ifPlayer {
                 if (player.playQueue!!.currentItem!!.url == url) {
-                    updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
+                    updatePlaybackProgress(currentProgress, duration)
                 }
             }
         }
