@@ -2010,7 +2010,7 @@ class VideoDetailFragment :
             }
 
             overlay.updateOverlayData(info.name, info.uploaderName, info.thumbnails)
-            if (currentInfo != null && info.url == currentInfo!!.url) {
+            if (currentInfo != null && info.url == currentInfo?.url) {
                 return
             }
 
@@ -2033,11 +2033,12 @@ class VideoDetailFragment :
 
         override fun onServiceStopped() {
             overlay.setOverlayPlayPauseImage(false)
-            if (currentInfo != null) {
+            val ci = currentInfo
+            if (ci != null) {
                 overlay.updateOverlayData(
-                    currentInfo!!.name,
-                    currentInfo!!.uploaderName,
-                    currentInfo!!.thumbnails
+                    ci.name,
+                    ci.uploaderName,
+                    ci.thumbnails
                 )
             }
             updateOverlayPlayQueueButtonVisibility()
@@ -2104,7 +2105,7 @@ class VideoDetailFragment :
             valueAnimator.interpolator = DecelerateInterpolator()
             valueAnimator.addUpdateListener(
                 AnimatorUpdateListener { animation: ValueAnimator? ->
-                    behavior!!.setTopAndBottomOffset(animation!!.getAnimatedValue() as Int)
+                    behavior?.setTopAndBottomOffset(animation!!.getAnimatedValue() as Int)
                     binding.appBarLayout.requestLayout()
                 }
             )
